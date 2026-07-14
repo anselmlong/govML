@@ -1,0 +1,15 @@
+requests>=2.32
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+xgboost>=2.1
+shap>=0.46
+matplotlib>=3.9
+pyarrow>=17
+truststore>=0.10
+markdown>=3.6
+lightgbm>=4.5
+anthropic>=0.40
+umap-learn>=0.5
+pytest>=8.0
+
