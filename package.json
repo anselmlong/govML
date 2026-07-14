@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm --prefix frontend ci && npm --prefix frontend run build",
+    "build": "rm -rf dist && npm --prefix frontend ci && npm --prefix frontend run build && cp -R frontend/dist ./dist",
     "start": "npm --prefix frontend run preview -- --host 0.0.0.0 --port ${PORT:-4173}"
   }
 }
