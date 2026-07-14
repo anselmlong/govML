@@ -1,0 +1,9 @@
+{
+  "name": "govml-sites",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend ci && npm --prefix frontend run build",
+    "start": "npm --prefix frontend run preview -- --host 0.0.0.0 --port ${PORT:-4173}"
+  }
+}
