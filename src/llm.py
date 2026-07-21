@@ -1,4 +1,16 @@
-"""Provider-configurable LLM helpers with safe fallbacks."""
+"""OpenAI-backed LLM helpers with safe local fallbacks.
+
+Configuration is read from the environment (or a local `.env`):
+
+- ``OPENAI_API_KEY``     required for remote chat + embeddings
+- ``OPENAI_BASE_URL``    optional, any OpenAI-compatible endpoint
+- ``OPENAI_CHAT_MODEL``  optional, defaults to ``gpt-4o-mini``
+- ``OPENAI_EMBED_MODEL`` optional, defaults to ``text-embedding-3-small``
+
+Without a key the module degrades to deterministic local behavior: chat
+helpers return ``None`` values and embeddings fall back to a hash-based
+local encoder, so the rest of the pipeline keeps working.
+"""
 
 from __future__ import annotations
 
@@ -10,19 +22,11 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-import requests
 
 from . import env as _env  # noqa: F401
 
-DEFAULT_CHAT_MODEL = "claude-sonnet-4-5-20250929"
+DEFAULT_CHAT_MODEL = "gpt-4o-mini"
 DEFAULT_EMBED_MODEL = "text-embedding-3-small"
-
-try:
-    import truststore
-
-    truststore.inject_into_ssl()
-except Exception:
-    pass
 
 
 @dataclass
@@ -31,61 +35,56 @@ class LLMResult:
     provenance: str
 
 
-def _provider_token() -> str | None:
-    return os.environ.get("GENAI_API_KEY") or os.environ.get("VISA_GENAI_TOKEN")
+def _api_key() -> str | None:
+    return os.environ.get("OPENAI_API_KEY")
 
 
 def _chat_model() -> str:
-    return os.environ.get("VISA_GENAI_MODEL", DEFAULT_CHAT_MODEL)
+    return os.environ.get("OPENAI_CHAT_MODEL", DEFAULT_CHAT_MODEL)
 
 
 def _embed_model() -> str:
-    return os.environ.get("VISA_GENAI_EMBED_MODEL", DEFAULT_EMBED_MODEL)
+    return os.environ.get("OPENAI_EMBED_MODEL", DEFAULT_EMBED_MODEL)
 
 
 def is_available() -> bool:
-    return bool(_provider_token() or os.environ.get("ANTHROPIC_API_KEY"))
+    return bool(_api_key())
 
 
 def _client() -> tuple[Any | None, str]:
-    token = _provider_token()
-    public_token = os.environ.get("ANTHROPIC_API_KEY")
+    key = _api_key()
+    if not key:
+        return None, "unavailable: OPENAI_API_KEY not set"
     try:
-        import anthropic
+        from openai import OpenAI
     except Exception as exc:
-        return None, f"unavailable: anthropic import failed: {exc}"
-
+        return None, f"unavailable: openai import failed: {exc}"
     try:
-        if token:
-            base_url = os.environ.get("VISA_GENAI_BASE_URL")
-            kwargs: dict[str, Any] = {"api_key": token}
-            if base_url:
-                kwargs["base_url"] = base_url
-            return anthropic.Anthropic(**kwargs), "provider"
-        if public_token:
-            return anthropic.Anthropic(api_key=public_token), "anthropic"
+        kwargs: dict[str, Any] = {"api_key": key}
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        if base_url:
+            kwargs["base_url"] = base_url
+        return OpenAI(**kwargs), "openai"
     except Exception as exc:
         return None, f"unavailable: client init failed: {exc}"
-    return None, "unavailable: no token"
 
 
 def chat_text(prompt: str, *, system: str | None = None, max_tokens: int = 1200) -> LLMResult:
     client, provenance = _client()
     if client is None:
         return LLMResult(None, provenance)
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
     try:
-        msg = client.messages.create(
+        resp = client.chat.completions.create(
             model=_chat_model(),
             max_tokens=max_tokens,
-            system=system or "",
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
         )
-        parts: list[str] = []
-        for block in getattr(msg, "content", []) or []:
-            text = getattr(block, "text", None)
-            if text:
-                parts.append(text)
-        return LLMResult("\n".join(parts).strip() or None, provenance)
+        text = (resp.choices[0].message.content or "").strip() if resp.choices else ""
+        return LLMResult(text or None, provenance)
     except Exception as exc:
         return LLMResult(None, f"{provenance}: {exc}")
 
@@ -151,29 +150,17 @@ def embed_texts(texts: list[str], *, model: str | None = None) -> LLMResult:
     """Return embeddings. Falls back to deterministic local embeddings."""
 
     model_name = model or _embed_model()
-    token = _provider_token()
-    base_url = os.environ.get("VISA_GENAI_BASE_URL")
-    if token and base_url:
+    client, provenance = _client()
+    if client is not None:
         try:
-            url = base_url.rstrip("/") + "/embeddings"
-            resp = requests.post(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-                json={
-                    "model_name": model_name,
-                    "application_name": "datagov_ml",
-                    "query": texts,
-                },
-                timeout=60,
-            )
-            resp.raise_for_status()
-            payload = resp.json()
-            data = payload.get("full_model_response", {}).get("data") or payload.get("data") or []
-            vectors = [item["embedding"] for item in data if "embedding" in item]
+            resp = client.embeddings.create(model=model_name, input=texts)
+            vectors = [item.embedding for item in resp.data]
             if len(vectors) == len(texts):
-                return LLMResult(vectors, "provider")
-            return LLMResult([_deterministic_embedding(t) for t in texts], "local-hash: incomplete provider response")
+                return LLMResult(vectors, provenance)
+            return LLMResult(
+                [_deterministic_embedding(t) for t in texts],
+                "local-hash: incomplete provider response",
+            )
         except Exception as exc:
             return LLMResult([_deterministic_embedding(t) for t in texts], f"local-hash: {exc}")
     return LLMResult([_deterministic_embedding(t) for t in texts], "local-hash")
-

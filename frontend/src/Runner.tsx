@@ -70,7 +70,11 @@ export default function Runner() {
           <h2>Run Log</h2>
           <button onClick={() => setShowRaw((value) => !value)}>{showRaw ? 'Hide raw' : 'Show raw'}</button>
         </div>
-        {showRaw ? <pre ref={logRef}>{lines.join('\n')}</pre> : <p>{lines[lines.length - 1] ?? 'Waiting for pipeline output...'}</p>}
+        {showRaw ? (
+          <pre ref={logRef}>{lines.join('\n')}</pre>
+        ) : (
+          <p className="log-line-latest">{lines[lines.length - 1] ?? 'Waiting for pipeline output...'}</p>
+        )}
       </section>
     </main>
   );

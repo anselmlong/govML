@@ -10,7 +10,7 @@ fast loop:
 5. Open a self-contained report with model metrics, diagnostics, context, and
    related datasets.
 
-The product favors graceful degradation. If LLM access, research, embeddings,
-optional model packages, or catalog data are unavailable, the pipeline should
-continue with heuristics whenever possible.
+The product favors graceful degradation. If LLM access (OpenAI), research,
+embeddings, optional model packages, or catalog data are unavailable, the
+pipeline should continue with heuristics whenever possible.
 

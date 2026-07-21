@@ -40,12 +40,27 @@ score_lock = threading.Lock()
 score_state: dict[str, Any] = {"running": False, "started_at": None, "completed_at": None, "last": None}
 
 app = FastAPI(title="govML")
+_cors_origins = [o.strip() for o in os.environ.get("GOVML_CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins or ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/health")
+def api_health() -> dict[str, Any]:
+    try:
+        catalog_stats = catalog.stats()
+    except Exception as exc:
+        catalog_stats = {"error": str(exc)}
+    return {
+        "status": "ok",
+        "llm_available": is_available(),
+        "catalog": catalog_stats,
+        "active_runs": len(active_procs),
+    }
 
 
 class AskRequest(BaseModel):
@@ -490,5 +505,12 @@ def api_report(run_id: str) -> FileResponse:
 
 dist = ROOT / "frontend" / "dist"
 if dist.exists():
-    app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+    app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa_fallback(path: str) -> FileResponse:
+        candidate = (dist / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(dist.resolve()):
+            return FileResponse(candidate)
+        return FileResponse(dist / "index.html")
 

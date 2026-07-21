@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { select, zoom } from 'd3';
 import {
@@ -267,13 +267,14 @@ export default function Home() {
       <section className="map-stage" aria-label="Semantic dataset map">
         <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of Singapore open datasets">
           <g ref={gRef}>
-            {nodes.map((node) => {
+            {nodes.map((node, index) => {
               const filtered = agencyFilter && node.agency !== agencyFilter;
               const active = selected?.dataset_id === node.dataset_id;
               const matched = selectedIds.has(node.dataset_id);
               return (
                 <circle
                   key={node.dataset_id}
+                  style={{ ['--i' as string]: index } as CSSProperties}
                   className={`map-dot ${active ? 'active' : ''} ${matched ? 'matched' : ''}`}
                   cx={node.x * 940 + 30}
                   cy={node.y * 640 + 30}
@@ -290,17 +291,22 @@ export default function Home() {
             })}
           </g>
         </svg>
-        {loading && <div className="map-loading">Building semantic map of roughly 4,415 datasets...</div>}
+        {loading && (
+          <div className="map-loading">
+            <span className="spinner" aria-hidden="true" />
+            Building the semantic map of open datasets...
+          </div>
+        )}
         <div className="map-hint">Scroll to zoom, drag to pan, click dot</div>
       </section>
 
       <header className="brand-strip">
         <div>
           <h1>govML</h1>
-          <p>Singapore Open Data</p>
+          <p>Open Data ML Workbench</p>
         </div>
         <button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme">
-          {themeMode === 'light' ? 'D' : 'L'}
+          {themeMode === 'light' ? '☾' : '☀'}
         </button>
       </header>
 
@@ -381,8 +387,8 @@ export default function Home() {
         </div>
 
         <div className="result-list">
-          {listItems.map((item) => (
-            <button key={item.dataset_id} onClick={() => chooseDataset(item)}>
+          {listItems.map((item, index) => (
+            <button key={item.dataset_id} style={{ ['--i' as string]: index } as CSSProperties} onClick={() => chooseDataset(item)}>
               <span className="agency-dot" style={{ background: nodeColor(item) }} />
               <b>{item.name}</b>
               <small>

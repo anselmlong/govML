@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { CSSProperties, useMemo } from 'react';
 
 type StageStatus = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -93,7 +93,11 @@ export default function PipelineStages({ lines, failed = false }: { lines: strin
     <section className="stage-card">
       <div className="stage-grid">
         {STAGES.map((stage, index) => (
-          <div className={`stage ${parsed.statuses[index]}`} key={stage.key}>
+          <div
+            className={`stage ${parsed.statuses[index]}`}
+            style={{ ['--i' as string]: index } as CSSProperties}
+            key={stage.key}
+          >
             <span>{index + 1}</span>
             <b>{stage.label}</b>
           </div>

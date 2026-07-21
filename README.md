@@ -21,19 +21,19 @@ pip install -r requirements.txt
 pip install -r requirements-web.txt
 ```
 
-Create a local `.env` if you want LLM-backed planning, embeddings, or Q&A:
+Copy `.env.example` to `.env` and set your OpenAI key if you want LLM-backed
+planning, embeddings, and Q&A:
 
 ```bash
-GENAI_API_KEY=
-VISA_GENAI_TOKEN=
-VISA_GENAI_BASE_URL=
-VISA_GENAI_MODEL=claude-sonnet-4-5-20250929
-VISA_GENAI_EMBED_MODEL=text-embedding-3-small
-ANTHROPIC_API_KEY=
+OPENAI_API_KEY=sk-...
+# optional overrides
+#OPENAI_BASE_URL=          # any OpenAI-compatible endpoint
+#OPENAI_CHAT_MODEL=gpt-4o-mini
+#OPENAI_EMBED_MODEL=text-embedding-3-small
 ```
 
-The project works without these values by using deterministic heuristics and
-local deterministic embeddings.
+The project works without a key by using deterministic heuristics and local
+hash embeddings, so everything stays functional offline — just less smart.
 
 ## Catalog
 
@@ -68,6 +68,12 @@ Main output:
 uvicorn backend.app:app --reload --port 8000
 ```
 
+`GET /api/health` reports service, catalog, and LLM availability — point your
+uptime checks there.
+
+Set `GOVML_CORS_ORIGINS` to a comma-separated list of allowed browser origins
+in production (defaults to `*` for local development).
+
 ## Frontend
 
 ```bash
@@ -78,9 +84,21 @@ npm run dev
 
 Vite proxies `/api` and `/reports` to the backend on port 8000.
 
+For production, `npm run build` emits `frontend/dist`, which the backend
+serves automatically at `/` when present.
+
+## Docker
+
+The included `Dockerfile` builds the frontend and serves the full app from a
+single container:
+
+```bash
+docker build -t govml .
+docker run -p 8000:8000 --env-file .env govml
+```
+
 ## Tests
 
 ```bash
 pytest
 ```
-
