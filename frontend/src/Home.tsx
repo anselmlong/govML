@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { select, zoom } from 'd3';
 import {
@@ -24,12 +24,12 @@ import { applyTheme, initialTheme, ThemeMode } from './theme';
 type Mode = 'search' | 'ask';
 type ColorMode = 'agency' | 'fit';
 
-const PALETTE = ['#4f46e5', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#c026d3', '#65a30d', '#2563eb', '#8a4b2a'];
+const PALETTE = ['#5e6ad2', '#26a269', '#e01b24', '#e5a50a', '#9141ac', '#1a9db8', '#c061cb', '#6fae3c', '#3584e4', '#b5835a'];
 const FIT_COLORS: Record<string, string> = {
-  good: '#059669',
-  okay: '#d97706',
-  marginal: '#737373',
-  blocked: '#dc2626'
+  good: '#26a269',
+  okay: '#e5a50a',
+  marginal: '#77767b',
+  blocked: '#e01b24'
 };
 
 const FEATURED: CatalogResult[] = [
@@ -171,7 +171,7 @@ export default function Home() {
 
   function nodeColor(node: CatalogResult) {
     const fit = suitabilityLookup[node.dataset_id];
-    if (colorMode === 'fit') return FIT_COLORS[fit?.tone ?? node.suitability_tone ?? 'marginal'] ?? '#737373';
+    if (colorMode === 'fit') return FIT_COLORS[fit?.tone ?? node.suitability_tone ?? 'marginal'] ?? '#77767b';
     return agencyColors.get(node.agency) ?? PALETTE[Math.abs(hashCode(node.agency)) % PALETTE.length];
   }
 
@@ -260,235 +260,289 @@ export default function Home() {
   const info = selectedInfo;
   const fit = selected ? suitabilityLookup[selected.dataset_id] ?? info?.suitability : null;
   const description = info?.description || selected?.description || '';
-  const displayedDescription = expanded || description.length < 360 ? description : `${description.slice(0, 360)}...`;
+  const displayedDescription = expanded || description.length < 320 ? description : `${description.slice(0, 320)}...`;
 
   return (
-    <main className="home-shell">
-      <section className="map-stage" aria-label="Semantic dataset map">
-        <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of Singapore open datasets">
-          <g ref={gRef}>
-            {nodes.map((node, index) => {
-              const filtered = agencyFilter && node.agency !== agencyFilter;
-              const active = selected?.dataset_id === node.dataset_id;
-              const matched = selectedIds.has(node.dataset_id);
-              return (
-                <circle
-                  key={node.dataset_id}
-                  style={{ ['--i' as string]: index } as CSSProperties}
-                  className={`map-dot ${active ? 'active' : ''} ${matched ? 'matched' : ''}`}
-                  cx={node.x * 940 + 30}
-                  cy={node.y * 640 + 30}
-                  r={active ? 7 : matched ? 5 : 3.2}
-                  fill={nodeColor(node)}
-                  opacity={filtered ? 0.08 : matched || active || !results.length ? 0.86 : 0.24}
-                  tabIndex={0}
-                  onClick={() => chooseDataset(node)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') chooseDataset(node);
-                  }}
-                />
-              );
-            })}
-          </g>
-        </svg>
-        {loading && (
-          <div className="map-loading">
-            <span className="spinner" aria-hidden="true" />
-            Building the semantic map of open datasets...
-          </div>
-        )}
-        <div className="map-hint">Scroll to zoom, drag to pan, click dot</div>
-      </section>
-
-      <header className="brand-strip">
-        <div>
-          <h1>govML</h1>
-          <p>Open Data ML Workbench</p>
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          govML
         </div>
-        <button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme">
-          {themeMode === 'light' ? '☾' : '☀'}
-        </button>
+        <span className="topbar-sub">Open Data ML Workbench</span>
+        <div className="topbar-right">
+          {stats && <span>{stats.total.toLocaleString()} datasets</span>}
+          <button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme">
+            {themeMode === 'light' ? '☾' : '☀'}
+          </button>
+        </div>
       </header>
 
-      <aside className="rail" aria-label="Catalog controls">
-        <div className="segmented">
-          <button className={mode === 'search' ? 'selected' : ''} onClick={() => setMode('search')}>
-            Search
-          </button>
-          <button className={mode === 'ask' ? 'selected' : ''} onClick={() => setMode('ask')}>
-            Ask
-          </button>
-        </div>
-
-        {mode === 'search' ? (
-          <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="housing prices, traffic, tourism" />
-        ) : (
-          <form
-            className="ask-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitAsk();
-            }}
-          >
-            <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask across the catalog" />
-            <button type="submit" disabled={answering}>
-              {answering ? 'Thinking' : 'Ask'}
+      <div className="main">
+        <aside className="sidebar" aria-label="Catalog controls">
+          <div className="segmented" role="tablist">
+            <button className={mode === 'search' ? 'selected' : ''} onClick={() => setMode('search')}>
+              Search
             </button>
-          </form>
-        )}
+            <button className={mode === 'ask' ? 'selected' : ''} onClick={() => setMode('ask')}>
+              Ask
+            </button>
+          </div>
 
-        {mode === 'ask' && (
-          <div className="examples">
-            {ASK_EXAMPLES.map((example) => (
-              <button key={example} onClick={() => submitAsk(example)}>
-                {example}
+          {mode === 'search' ? (
+            <input
+              className="search-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search datasets..."
+            />
+          ) : (
+            <form
+              className="ask-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitAsk();
+              }}
+            >
+              <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask across the catalog..." />
+              <button type="submit" className="button primary" disabled={answering}>
+                {answering ? 'Thinking...' : 'Ask'}
+              </button>
+            </form>
+          )}
+
+          {mode === 'ask' && !answer && (
+            <div className="examples">
+              {ASK_EXAMPLES.map((example) => (
+                <button key={example} onClick={() => submitAsk(example)}>
+                  {example}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {answer && <div className="answer">{renderAnswer(answer)}</div>}
+
+          <div className="section-label">
+            <span>Color by</span>
+            <div className="mini-toggle">
+              <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
+                Agency
+              </button>
+              <button className={colorMode === 'fit' ? 'selected' : ''} onClick={() => setColorMode('fit')}>
+                ML fit
+              </button>
+            </div>
+          </div>
+
+          <div className="section-label">
+            <span>Agencies</span>
+          </div>
+          <div className="agency-list" aria-label="Agency filter">
+            <button className={!agencyFilter ? 'selected' : ''} onClick={() => setAgencyFilter(null)}>
+              <span className="agency-swatch" style={{ background: 'var(--faint)' }} />
+              <span className="agency-name">All agencies</span>
+              <span className="agency-count">{stats?.total ?? ''}</span>
+            </button>
+            {stats?.top_agencies.slice(0, 10).map((agency) => (
+              <button
+                key={agency.agency}
+                className={agencyFilter === agency.agency ? 'selected' : ''}
+                onClick={() => setAgencyFilter(agencyFilter === agency.agency ? null : agency.agency)}
+              >
+                <span className="agency-swatch" style={{ background: agencyColors.get(agency.agency) }} />
+                <span className="agency-name">{agency.agency || 'Unknown'}</span>
+                <span className="agency-count">{agency.count}</span>
               </button>
             ))}
           </div>
-        )}
 
-        {answer && <div className="answer">{renderAnswer(answer)}</div>}
-
-        <div className="row-between">
-          <span>Color</span>
-          <div className="mini-toggle">
-            <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
-              Agency
-            </button>
-            <button className={colorMode === 'fit' ? 'selected' : ''} onClick={() => setColorMode('fit')}>
-              ML fit
-            </button>
+          <div className="section-label">
+            <span>{results.length ? 'Results' : topFit.length ? 'Best ML fit' : 'Featured'}</span>
           </div>
-        </div>
-
-        <div className="score-box">
-          <span>
-            ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
-          </span>
-          <button onClick={startScoring} disabled={scoreStatus?.running}>
-            {scoreStatus?.running ? 'Scoring' : 'Score all'}
-          </button>
-        </div>
-
-        <div className="chips" aria-label="Agency filter">
-          <button className={!agencyFilter ? 'selected' : ''} onClick={() => setAgencyFilter(null)}>
-            All
-          </button>
-          {stats?.top_agencies.slice(0, 10).map((agency) => (
-            <button
-              key={agency.agency}
-              className={agencyFilter === agency.agency ? 'selected' : ''}
-              style={{ borderColor: agencyColors.get(agency.agency) }}
-              onClick={() => setAgencyFilter(agency.agency)}
-            >
-              {agency.agency || 'Unknown'} {agency.count}
-            </button>
-          ))}
-        </div>
-
-        <div className="result-list">
-          {listItems.map((item, index) => (
-            <button key={item.dataset_id} style={{ ['--i' as string]: index } as CSSProperties} onClick={() => chooseDataset(item)}>
-              <span className="agency-dot" style={{ background: nodeColor(item) }} />
-              <b>{item.name}</b>
-              <small>
-                {item.agency || 'Unknown'} / {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
-              </small>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      {selected && (
-        <aside className="detail-panel" aria-label="Dataset detail">
-          <button ref={closeButtonRef} className="close-button" onClick={closeDetail} aria-label="Close dataset detail">
-            X
-          </button>
-          <p className="eyebrow">{info?.agency || selected.agency || 'Singapore open data'}</p>
-          <h2>{info?.name || selected.name}</h2>
-          {detailLoading && <p className="muted">Loading dataset preview...</p>}
-          <div className={`fit-badge ${fit?.tone ?? 'marginal'}`}>
-            <b>{fit ? fit.score : selected.suitability_score ?? 'NA'}</b>
-            <span>{fit?.verdict ?? selected.suitability_tone ?? 'Not scored yet'}</span>
-          </div>
-          <p className="description">{displayedDescription || 'No description available.'}</p>
-          {description.length > 360 && (
-            <button className="text-button" onClick={() => setExpanded((value) => !value)}>
-              {expanded ? 'Read less' : 'Read more'}
-            </button>
-          )}
-          {info?.url && (
-            <a className="source-link" href={info.url} target="_blank" rel="noreferrer">
-              Source
-            </a>
-          )}
-          <div className="meta-grid">
-            <span>Rows</span>
-            <b>{info?.row_count_total?.toLocaleString() ?? 'Unknown'}</b>
-            <span>Columns</span>
-            <b>{info?.column_count ?? 'Unknown'}</b>
-            <span>Updated</span>
-            <b>{info?.last_updated || selected.last_updated_at || 'Unknown'}</b>
-            <span>Coverage</span>
-            <b>{info?.coverage_start || selected.coverage_start || 'NA'} to {info?.coverage_end || selected.coverage_end || 'NA'}</b>
-          </div>
-          {fit?.reasons?.length ? (
-            <ul className="reason-list">
-              {fit.reasons.slice(0, 4).map((reason) => (
-                <li key={`${reason.kind}-${reason.text}`}>{reason.text}</li>
-              ))}
-            </ul>
-          ) : null}
-          {info?.columns?.length ? (
-            <div className="schema-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Column</th>
-                    <th>Kind</th>
-                    <th>Null</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {info.columns.slice(0, 12).map((column) => (
-                    <tr key={column.name}>
-                      <td>{column.title || column.name}</td>
-                      <td>{column.kind}</td>
-                      <td>{column.null_pct.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          <div className="run-config">
-            <label>
-              Rows
-              <select value={maxRows} onChange={(event) => setMaxRows(Number(event.target.value))}>
-                <option value={0}>All rows up to 200,000</option>
-                <option value={60000}>60,000 rows</option>
-                <option value={30000}>30,000 rows</option>
-                <option value={5000}>5,000 quick rows</option>
-              </select>
-            </label>
-            <label className="check-row">
-              <input type="checkbox" checked={noResearch} onChange={(event) => setNoResearch(event.target.checked)} />
-              Skip research
-            </label>
-            <label className="check-row">
-              <input type="checkbox" checked={noCorrelation} onChange={(event) => setNoCorrelation(event.target.checked)} />
-              Skip correlation
-            </label>
-            <button className="launch-button" onClick={launchRun} disabled={launching}>
-              {launching ? 'Launching' : 'Run ML'}
-            </button>
+          <div className="result-list">
+            {listItems.map((item) => (
+              <button
+                key={item.dataset_id}
+                className={selected?.dataset_id === item.dataset_id ? 'selected' : ''}
+                onClick={() => chooseDataset(item)}
+              >
+                <span className="result-dot" style={{ background: nodeColor(item) }} />
+                <span className="result-name">{item.name}</span>
+                <span className="result-meta">
+                  {item.agency || 'Unknown'} · {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
+                </span>
+              </button>
+            ))}
+            {!listItems.length && <p className="empty-note">No datasets match this search yet. Try a broader term.</p>}
           </div>
         </aside>
-      )}
+
+        <section className="canvas" aria-label="Semantic dataset map">
+          <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of open datasets">
+            <g ref={gRef}>
+              {nodes.map((node) => {
+                const filtered = agencyFilter && node.agency !== agencyFilter;
+                const active = selected?.dataset_id === node.dataset_id;
+                const matched = selectedIds.has(node.dataset_id);
+                return (
+                  <circle
+                    key={node.dataset_id}
+                    className={`map-dot ${active ? 'active' : ''} ${matched ? 'matched' : ''}`}
+                    cx={node.x * 940 + 30}
+                    cy={node.y * 640 + 30}
+                    r={active ? 7 : matched ? 5 : 3.2}
+                    fill={nodeColor(node)}
+                    opacity={filtered ? 0.08 : matched || active || !results.length ? 0.9 : 0.25}
+                    tabIndex={0}
+                    onClick={() => chooseDataset(node)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') chooseDataset(node);
+                    }}
+                  />
+                );
+              })}
+            </g>
+          </svg>
+          {loading && (
+            <div className="canvas-loading">
+              <span className="spinner" aria-hidden="true" />
+              Loading the semantic map...
+            </div>
+          )}
+        </section>
+
+        {selected && (
+          <aside className="inspector" aria-label="Dataset detail">
+            <div className="inspector-head">
+              <div>
+                <h2>{info?.name || selected.name}</h2>
+                <p className="inspector-agency">{info?.agency || selected.agency || 'Unknown agency'}</p>
+              </div>
+              <button ref={closeButtonRef} className="icon-button" onClick={closeDetail} aria-label="Close dataset detail">
+                ✕
+              </button>
+            </div>
+
+            <div className="inspector-body">
+              {detailLoading && (
+                <>
+                  <div className="skeleton" style={{ height: 24, width: 140 }} />
+                  <div className="skeleton" style={{ height: 60 }} />
+                  <div className="skeleton" style={{ height: 120 }} />
+                </>
+              )}
+
+              {!detailLoading && (
+                <>
+                  <span className={`fit-chip ${fit?.tone ?? ''}`}>
+                    <b>{fit ? fit.score : selected.suitability_score ?? '—'}</b>
+                    {fit?.verdict ?? selected.suitability_tone ?? 'Not scored yet'}
+                  </span>
+
+                  <p className="description">{displayedDescription || 'No description available.'}</p>
+                  {description.length > 320 && (
+                    <button className="text-button" onClick={() => setExpanded((value) => !value)}>
+                      {expanded ? 'Show less' : 'Show more'}
+                    </button>
+                  )}
+
+                  <div className="meta-grid">
+                    <span>Rows</span>
+                    <b>{info?.row_count_total?.toLocaleString() ?? 'Unknown'}</b>
+                    <span>Columns</span>
+                    <b>{info?.column_count ?? 'Unknown'}</b>
+                    <span>Updated</span>
+                    <b>{info?.last_updated || selected.last_updated_at || 'Unknown'}</b>
+                    <span>Coverage</span>
+                    <b>
+                      {info?.coverage_start || selected.coverage_start || '—'} to {info?.coverage_end || selected.coverage_end || '—'}
+                    </b>
+                    {info?.url && (
+                      <>
+                        <span>Source</span>
+                        <a className="source-link" href={info.url} target="_blank" rel="noreferrer">
+                          data.gov.sg ↗
+                        </a>
+                      </>
+                    )}
+                  </div>
+
+                  {fit?.reasons?.length ? (
+                    <ul className="reason-list">
+                      {fit.reasons.slice(0, 4).map((reason) => (
+                        <li key={`${reason.kind}-${reason.text}`}>{reason.text}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {info?.columns?.length ? (
+                    <div className="schema-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Column</th>
+                            <th>Kind</th>
+                            <th>Null</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {info.columns.slice(0, 12).map((column) => (
+                            <tr key={column.name}>
+                              <td>{column.title || column.name}</td>
+                              <td>
+                                <span className="kind-tag">{column.kind}</span>
+                              </td>
+                              <td className="num">{column.null_pct.toFixed(1)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+
+            <div className="inspector-foot">
+              <label className="field">
+                Rows to fetch
+                <select value={maxRows} onChange={(event) => setMaxRows(Number(event.target.value))}>
+                  <option value={0}>All rows up to 200,000</option>
+                  <option value={60000}>60,000 rows</option>
+                  <option value={30000}>30,000 rows</option>
+                  <option value={5000}>5,000 quick rows</option>
+                </select>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={noResearch} onChange={(event) => setNoResearch(event.target.checked)} />
+                Skip research
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={noCorrelation} onChange={(event) => setNoCorrelation(event.target.checked)} />
+                Skip correlation
+              </label>
+              <button className="button primary" onClick={launchRun} disabled={launching}>
+                {launching ? 'Launching...' : 'Run ML pipeline'}
+              </button>
+            </div>
+          </aside>
+        )}
+      </div>
+
+      <footer className="statusbar">
+        <span className="statusbar-item">
+          ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
+        </span>
+        <button className="statusbar-item" onClick={startScoring} disabled={scoreStatus?.running}>
+          {scoreStatus?.running ? 'Scoring...' : 'Score all'}
+        </button>
+        <span className="grow" />
+        <span className="statusbar-item">Scroll to zoom · drag to pan · click a dot</span>
+        <RunsDock />
+      </footer>
 
       {error && <div className="toast">{error}</div>}
-      <RunsDock />
-    </main>
+    </div>
   );
 }

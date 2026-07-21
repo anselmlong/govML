@@ -30,52 +30,75 @@ export default function Runner() {
   const failed = run?.status === 'failed';
 
   return (
-    <main className="runner-shell">
-      <header className="runner-header">
+    <div className="runner-shell">
+      <header className="runner-topbar">
         <Link to="/" className="back-link">
-          Back
+          ← Catalog
         </Link>
-        <div>
-          <p className="eyebrow">Pipeline run</p>
-          <h1>{run?.name ?? runId}</h1>
-        </div>
-        <span className={`status-badge ${run?.status ?? 'running'}`}>{run?.status ?? 'loading'}</span>
+        <h1>{run?.name ?? runId}</h1>
+        <span className={`status-chip ${run?.status ?? 'running'}`}>
+          <span className={`status-dot ${run?.status ?? 'running'}`} />
+          {run?.status ?? 'loading'}
+        </span>
       </header>
 
-      {error && <div className="toast">{error}</div>}
-      <PipelineStages lines={lines} failed={failed} />
+      <main className="runner-body">
+        {error && <div className="toast">{error}</div>}
 
-      {completed && run && (
-        <section className="completion-card">
-          <div>
-            <span>Best model</span>
-            <b>{run.best_model ?? 'Completed'}</b>
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Pipeline</h2>
           </div>
-          <div>
-            <span>MAE</span>
-            <b>{run.mae?.toPrecision(4) ?? 'NA'}</b>
+          <div className="panel-body">
+            <PipelineStages lines={lines} failed={failed} />
           </div>
-          <div>
-            <span>R2</span>
-            <b>{run.r2?.toPrecision(4) ?? 'NA'}</b>
-          </div>
-          <a href={`/reports/${run.run_id}`} target="_blank" rel="noreferrer">
-            Open report
-          </a>
         </section>
-      )}
 
-      <section className="log-card">
-        <div className="row-between">
-          <h2>Run Log</h2>
-          <button onClick={() => setShowRaw((value) => !value)}>{showRaw ? 'Hide raw' : 'Show raw'}</button>
-        </div>
-        {showRaw ? (
-          <pre ref={logRef}>{lines.join('\n')}</pre>
-        ) : (
-          <p className="log-line-latest">{lines[lines.length - 1] ?? 'Waiting for pipeline output...'}</p>
+        {completed && run && (
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Result</h2>
+              <a className="source-link" href={`/reports/${run.run_id}`} target="_blank" rel="noreferrer">
+                Open full report ↗
+              </a>
+            </div>
+            <div className="panel-body">
+              <div className="completion-grid">
+                <div className="fact">
+                  <span>Best model</span>
+                  <b>{run.best_model ?? 'Completed'}</b>
+                </div>
+                <div className="fact">
+                  <span>MAE</span>
+                  <b>{run.mae?.toPrecision(4) ?? '—'}</b>
+                </div>
+                <div className="fact">
+                  <span>R²</span>
+                  <b>{run.r2?.toPrecision(4) ?? '—'}</b>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
-      </section>
-    </main>
+
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Run log</h2>
+            <button className="button" onClick={() => setShowRaw((value) => !value)}>
+              {showRaw ? 'Latest line' : 'Full log'}
+            </button>
+          </div>
+          {showRaw ? (
+            <pre className="log-pre" ref={logRef}>
+              {lines.join('\n')}
+            </pre>
+          ) : (
+            <div className="panel-body">
+              <p className="log-line-latest">{lines[lines.length - 1] ?? 'Waiting for pipeline output...'}</p>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo } from 'react';
+import { useMemo } from 'react';
 
 type StageStatus = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -90,32 +90,43 @@ export default function PipelineStages({ lines, failed = false }: { lines: strin
   }, [lines, failed]);
 
   return (
-    <section className="stage-card">
-      <div className="stage-grid">
-        {STAGES.map((stage, index) => (
-          <div
-            className={`stage ${parsed.statuses[index]}`}
-            style={{ ['--i' as string]: index } as CSSProperties}
-            key={stage.key}
-          >
-            <span>{index + 1}</span>
-            <b>{stage.label}</b>
-          </div>
-        ))}
+    <>
+      <div className="stage-track">
+        {STAGES.map((stage, index) => {
+          const status = parsed.statuses[index];
+          return (
+            <div className={`stage ${status}`} key={stage.key}>
+              <span className="stage-icon">{status === 'completed' ? '✓' : status === 'failed' ? '✕' : index + 1}</span>
+              {stage.label}
+            </div>
+          );
+        })}
       </div>
       <div className="facts-grid">
-        <span>Rows</span>
-        <b>{parsed.facts.rows ?? 'Pending'}</b>
-        <span>Columns</span>
-        <b>{parsed.facts.columns ?? 'Pending'}</b>
-        <span>Target</span>
-        <b>{parsed.facts.target ?? 'Pending'}</b>
-        <span>Task</span>
-        <b>{parsed.facts.taskType ?? 'Pending'}</b>
-        <span>Features</span>
-        <b>{parsed.facts.features ?? 'Pending'}</b>
-        <span>Metrics</span>
-        <b>{parsed.facts.metrics ?? 'Pending'}</b>
+        <div className="fact">
+          <span>Rows</span>
+          <b>{parsed.facts.rows ?? '—'}</b>
+        </div>
+        <div className="fact">
+          <span>Columns</span>
+          <b>{parsed.facts.columns ?? '—'}</b>
+        </div>
+        <div className="fact">
+          <span>Target</span>
+          <b>{parsed.facts.target ?? '—'}</b>
+        </div>
+        <div className="fact">
+          <span>Task</span>
+          <b>{parsed.facts.taskType ?? '—'}</b>
+        </div>
+        <div className="fact">
+          <span>Features</span>
+          <b>{parsed.facts.features ?? '—'}</b>
+        </div>
+        <div className="fact">
+          <span>Metrics</span>
+          <b>{parsed.facts.metrics ?? '—'}</b>
+        </div>
       </div>
       {parsed.facts.topFeatures.length > 0 && (
         <div className="top-features">
@@ -124,7 +135,7 @@ export default function PipelineStages({ lines, failed = false }: { lines: strin
           ))}
         </div>
       )}
-    </section>
+    </>
   );
 }
 
