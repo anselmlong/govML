@@ -6,6 +6,7 @@ import {
   CatalogResult,
   CatalogStats,
   DatasetInfo,
+  friendlyError,
   getCatalogMap,
   getCatalogStats,
   getDatasetInfo,
@@ -31,23 +32,6 @@ const FIT_COLORS: Record<string, string> = {
   marginal: '#737373',
   blocked: '#dc2626'
 };
-
-const FEATURED: CatalogResult[] = [
-  {
-    dataset_id: 'f1765b54-a209-4718-8d38-a39237f502b3',
-    name: 'HDB Resale Flat Prices',
-    description: 'Resale flat transactions from January 2017 onwards.',
-    agency: 'Housing and Development Board'
-  },
-  { dataset_id: 'unemployment-rate', name: 'Unemployment Rate', description: 'Labour-market headline series.', agency: 'Ministry of Manpower' },
-  { dataset_id: 'monthly-taxi-fleet', name: 'Monthly Taxi Fleet', description: 'Taxi fleet counts by month.', agency: 'Land Transport Authority' },
-  {
-    dataset_id: 'assessable-income-distribution',
-    name: 'Assessable Income Distribution',
-    description: 'Income distribution tables for analytical work.',
-    agency: 'Inland Revenue Authority of Singapore'
-  }
-];
 
 const ASK_EXAMPLES = [
   'How does HDB resale price vary by town?',
@@ -108,7 +92,7 @@ export default function Home() {
         if (fitResult.status === 'fulfilled') setSuitabilityLookup(fitResult.value);
         if (scoreResult.status === 'fulfilled') setScoreStatus(scoreResult.value);
       })
-      .catch((err: unknown) => setError(String(err)))
+      .catch((err: unknown) => setError(friendlyError(err)))
       .finally(() => mounted && setLoading(false));
     return () => {
       mounted = false;
@@ -136,7 +120,7 @@ export default function Home() {
         setResults([]);
         return;
       }
-      searchCatalog(query, 10).then(setResults).catch((err: unknown) => setError(String(err)));
+      searchCatalog(query, 10).then(setResults).catch((err: unknown) => setError(friendlyError(err)));
     }, 280);
     return () => window.clearTimeout(handle);
   }, [query, mode]);
@@ -190,7 +174,7 @@ export default function Home() {
       const info = await getDatasetInfo(dataset.dataset_id);
       setSelectedInfo(info);
     } catch (err) {
-      setError(String(err));
+      setError(friendlyError(err));
     } finally {
       setDetailLoading(false);
     }
@@ -215,7 +199,7 @@ export default function Home() {
       setAnswer(res.answer);
       setResults(res.datasets);
     } catch (err) {
-      setError(String(err));
+      setError(friendlyError(err));
     } finally {
       setAnswering(false);
     }
@@ -235,7 +219,7 @@ export default function Home() {
       });
       navigate(`/run/${res.run_id}`);
     } catch (err) {
-      setError(String(err));
+      setError(friendlyError(err));
     } finally {
       setLaunching(false);
     }
@@ -246,7 +230,7 @@ export default function Home() {
       await startScoreAll(undefined, true);
       setScoreStatus(await getScoreStatus());
     } catch (err) {
-      setError(String(err));
+      setError(friendlyError(err));
     }
   }
 
@@ -256,7 +240,11 @@ export default function Home() {
     applyTheme(next);
   }
 
-  const listItems = results.length ? results : topFit.length ? topFit : FEATURED;
+  const searching = mode === 'search' && query.trim().length >= 2;
+  const browseItems = topFit.length ? topFit : nodes.slice(0, 8);
+  const listItems = searching || mode === 'ask' ? results : browseItems;
+  const catalogEmpty = !loading && nodes.length === 0;
+  const showSkeleton = loading && !searching && listItems.length === 0;
   const info = selectedInfo;
   const fit = selected ? suitabilityLookup[selected.dataset_id] ?? info?.suitability : null;
   const description = info?.description || selected?.description || '';
@@ -266,7 +254,7 @@ export default function Home() {
     <main className="home-shell">
       <section className="map-stage" aria-label="Semantic dataset map">
         <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of Singapore open datasets">
-          <g ref={gRef}>
+          <g ref={gRef} className="map-nodes">
             {nodes.map((node) => {
               const filtered = agencyFilter && node.agency !== agencyFilter;
               const active = selected?.dataset_id === node.dataset_id;
@@ -290,22 +278,64 @@ export default function Home() {
             })}
           </g>
         </svg>
-        {loading && <div className="map-loading">Building semantic map of roughly 4,415 datasets...</div>}
+        {loading && (
+          <div className="map-loading">
+            <span className="spinner" aria-hidden="true" />
+            Building semantic map{stats?.total ? ` of ${stats.total.toLocaleString()} datasets` : ''}...
+          </div>
+        )}
         <div className="map-hint">Scroll to zoom, drag to pan, click dot</div>
       </section>
 
-      <header className="brand-strip">
-        <div>
-          <h1>govML</h1>
-          <p>Singapore Open Data</p>
+      <header className="topbar">
+        <a className="brand-lockup" href="/">
+          <span className="brand-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="brand-copy">
+            <b>govML</b>
+            <span>Singapore Open Data</span>
+          </span>
+        </a>
+        <div className="nav-actions">
+          <a className="attribution-link" href="https://data.gov.sg" target="_blank" rel="noreferrer">
+            Data from data.gov.sg ↗
+          </a>
+          <button
+            className="icon-button"
+            onClick={toggleTheme}
+            aria-label={themeMode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            title={themeMode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {themeMode === 'light' ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </button>
         </div>
-        <button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme">
-          {themeMode === 'light' ? 'D' : 'L'}
-        </button>
       </header>
 
       <aside className="rail" aria-label="Catalog controls">
         <div className="segmented">
+          <span className={`indicator ${mode === 'ask' ? 'pos-1' : ''}`} aria-hidden="true" />
           <button className={mode === 'search' ? 'selected' : ''} onClick={() => setMode('search')}>
             Search
           </button>
@@ -315,7 +345,13 @@ export default function Home() {
         </div>
 
         {mode === 'search' ? (
-          <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="housing prices, traffic, tourism" />
+          <div className="search-field">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="housing prices, traffic, tourism" />
+          </div>
         ) : (
           <form
             className="ask-form"
@@ -326,7 +362,7 @@ export default function Home() {
           >
             <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask across the catalog" />
             <button type="submit" disabled={answering}>
-              {answering ? 'Thinking' : 'Ask'}
+              {answering && <span className="spinner" aria-hidden="true" />} {answering ? 'Thinking' : 'Ask'}
             </button>
           </form>
         )}
@@ -346,6 +382,7 @@ export default function Home() {
         <div className="row-between">
           <span>Color</span>
           <div className="mini-toggle">
+            <span className={`indicator ${colorMode === 'fit' ? 'pos-1' : ''}`} aria-hidden="true" />
             <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
               Agency
             </button>
@@ -360,7 +397,7 @@ export default function Home() {
             ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
           </span>
           <button onClick={startScoring} disabled={scoreStatus?.running}>
-            {scoreStatus?.running ? 'Scoring' : 'Score all'}
+            {scoreStatus?.running && <span className="spinner" aria-hidden="true" />} {scoreStatus?.running ? 'Scoring' : 'Score all'}
           </button>
         </div>
 
@@ -380,26 +417,42 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="result-list">
-          {listItems.map((item) => (
-            <button key={item.dataset_id} onClick={() => chooseDataset(item)}>
-              <span className="agency-dot" style={{ background: nodeColor(item) }} />
-              <b>{item.name}</b>
-              <small>
-                {item.agency || 'Unknown'} / {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
-              </small>
-            </button>
-          ))}
-        </div>
+        {showSkeleton ? (
+          <div className="result-skeleton" aria-hidden="true">
+            {[0, 1, 2, 3].map((row) => (
+              <div key={row} className="skeleton-row" />
+            ))}
+          </div>
+        ) : searching && listItems.length === 0 ? (
+          <p className="empty-state">No datasets match &ldquo;{query}&rdquo;. Try a broader term, or browse by agency below.</p>
+        ) : catalogEmpty ? (
+          <p className="empty-state">
+            No datasets ingested yet. Run <code>python catalog.py ingest</code> to populate the catalog.
+          </p>
+        ) : (
+          <div className="result-list">
+            {listItems.map((item) => (
+              <button key={item.dataset_id} onClick={() => chooseDataset(item)}>
+                <span className="agency-dot" style={{ background: nodeColor(item) }} />
+                <b>{item.name}</b>
+                <small>
+                  {item.agency || 'Unknown'} &nbsp;•&nbsp; {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
+                </small>
+              </button>
+            ))}
+          </div>
+        )}
       </aside>
 
       {selected && (
-        <aside className="detail-panel" aria-label="Dataset detail">
+        <aside className="detail-panel" aria-label="Dataset detail" key={selected.dataset_id}>
           <button ref={closeButtonRef} className="close-button" onClick={closeDetail} aria-label="Close dataset detail">
-            X
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
-          <p className="eyebrow">{info?.agency || selected.agency || 'Singapore open data'}</p>
           <h2>{info?.name || selected.name}</h2>
+          <p className="agency-line">{info?.agency || selected.agency || 'Singapore open data'}</p>
           {detailLoading && <p className="muted">Loading dataset preview...</p>}
           <div className={`fit-badge ${fit?.tone ?? 'marginal'}`}>
             <b>{fit ? fit.score : selected.suitability_score ?? 'NA'}</b>
@@ -475,7 +528,7 @@ export default function Home() {
               Skip correlation
             </label>
             <button className="launch-button" onClick={launchRun} disabled={launching}>
-              {launching ? 'Launching' : 'Run ML'}
+              {launching && <span className="spinner" aria-hidden="true" />} {launching ? 'Launching' : 'Run ML'}
             </button>
           </div>
         </aside>

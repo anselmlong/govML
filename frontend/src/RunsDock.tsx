@@ -41,7 +41,7 @@ export default function RunsDock() {
               )}
             </div>
           ))}
-          {!runs.length && <p>No runs yet.</p>}
+          {!runs.length && <p className="empty-state">No runs yet. Pick a dataset and choose Run ML to start one.</p>}
         </div>
       )}
     </div>

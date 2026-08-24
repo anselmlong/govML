@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getRun, RunRecord, streamRun } from './api';
+import { friendlyError, getRun, RunRecord, streamRun } from './api';
 import PipelineStages from './PipelineStages';
 
 export default function Runner() {
@@ -13,7 +13,7 @@ export default function Runner() {
 
   useEffect(() => {
     if (!runId) return;
-    getRun(runId).then(setRun).catch((err: unknown) => setError(String(err)));
+    getRun(runId).then(setRun).catch((err: unknown) => setError(friendlyError(err)));
     const source = streamRun(
       runId,
       (line) => setLines((current) => [...current, line]),
@@ -33,13 +33,14 @@ export default function Runner() {
     <main className="runner-shell">
       <header className="runner-header">
         <Link to="/" className="back-link">
-          Back
+          ← Back
         </Link>
         <div>
-          <p className="eyebrow">Pipeline run</p>
           <h1>{run?.name ?? runId}</h1>
         </div>
-        <span className={`status-badge ${run?.status ?? 'running'}`}>{run?.status ?? 'loading'}</span>
+        <span className={`status-badge ${run?.status ?? 'running'}`}>
+          {run?.status === 'running' && <span className="spinner" aria-hidden="true" />} {run?.status ?? 'loading'}
+        </span>
       </header>
 
       {error && <div className="toast">{error}</div>}

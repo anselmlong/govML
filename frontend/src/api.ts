@@ -116,6 +116,23 @@ export interface ScoreStatus {
   last?: unknown;
 }
 
+export function friendlyError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/failed to fetch|networkerror|load failed/i.test(raw)) {
+    return "Can't reach the server. Check your connection and try again.";
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.detail === 'string') return parsed.detail;
+    if (Array.isArray(parsed?.detail)) {
+      return parsed.detail.map((d: { msg?: string }) => d?.msg || JSON.stringify(d)).join('; ');
+    }
+  } catch {
+    // Not JSON; fall through to the raw message.
+  }
+  return raw || 'Something went wrong. Please try again.';
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(await res.text());
