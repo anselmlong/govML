@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from .llm import DEFAULT_EMBED_MODEL, embed_texts
+from .llm import DEFAULT_EMBED_MODEL, compute_idf, embed_texts
 from .suitability import assess_suitability
 
 DB_PATH = Path("catalog.db")
@@ -185,14 +185,36 @@ def _rows_to_embed(conn: sqlite3.Connection, model: str, limit: int | None, forc
     return list(conn.execute(sql, params))
 
 
+_IDF_CACHE: dict[str, Any] = {"fingerprint": None, "idf": None}
+
+
+def _corpus_idf(conn: sqlite3.Connection) -> dict[str, float]:
+    """Corpus-wide IDF, cached per-process. Recomputing it on every search
+    request would re-tokenize every dataset description on each keystroke;
+    cache it and only rebuild when the catalog's size or freshness changes.
+    """
+    fingerprint = conn.execute(
+        "SELECT COUNT(*), MAX(last_updated_at) FROM datasets"
+    ).fetchone()
+    if _IDF_CACHE["fingerprint"] == fingerprint and _IDF_CACHE["idf"] is not None:
+        return _IDF_CACHE["idf"]
+    rows = conn.execute("SELECT name, description FROM datasets")
+    texts = [f"{row['name']}. {row['description'] or ''}" for row in rows]
+    idf = compute_idf(texts)
+    _IDF_CACHE["fingerprint"] = fingerprint
+    _IDF_CACHE["idf"] = idf
+    return idf
+
+
 def embed(model: str = DEFAULT_EMBED_MODEL, batch_size: int = 64, limit: int | None = None, force: bool = False, db_path: str | Path = DB_PATH) -> int:
     conn = connect(db_path)
+    idf = _corpus_idf(conn)
     rows = _rows_to_embed(conn, model, limit, force)
     done = 0
     for start in range(0, len(rows), batch_size):
         batch = rows[start : start + batch_size]
         texts = [f"{row['name']}. {row['description'] or ''}" for row in batch]
-        result = embed_texts(texts, model=model)
+        result = embed_texts(texts, model=model, idf=idf)
         vectors = result.value or []
         for row, vector in zip(batch, vectors):
             arr = np.asarray(vector, dtype=np.float32)
@@ -276,7 +298,7 @@ def search(query: str, top_k: int = 10, db_path: str | Path = DB_PATH) -> list[d
         out = _keyword_search(conn, query, top_k)
         conn.close()
         return out
-    q = np.asarray(embed_texts([query]).value[0], dtype=np.float32)[: mat.shape[1]]
+    q = np.asarray(embed_texts([query], idf=_corpus_idf(conn)).value[0], dtype=np.float32)[: mat.shape[1]]
     q_norm = np.linalg.norm(q)
     if q_norm:
         q = q / q_norm
@@ -353,16 +375,32 @@ def sample(limit: int = 250, db_path: str | Path = DB_PATH) -> list[dict[str, An
 
 
 def _normalize_xy(coords: np.ndarray) -> np.ndarray:
-    mins = coords.min(axis=0)
-    maxs = coords.max(axis=0)
-    span = np.where(maxs - mins == 0, 1, maxs - mins)
-    return (coords - mins) / span
+    # Robust-scale off the 2nd/98th percentile rather than raw min/max: a
+    # handful of far-flung outlier datasets would otherwise stretch the
+    # range so wide that the dense main cluster collapses into a small
+    # patch in the middle. Outliers still land outside [0, 1], just not at
+    # the expense of everyone else's spread.
+    lo = np.percentile(coords, 2, axis=0)
+    hi = np.percentile(coords, 98, axis=0)
+    span = np.where(hi - lo == 0, 1, hi - lo)
+    return (coords - lo) / span
+
+
+_MAP_CACHE: dict[str, Any] = {"mtime": None, "data": None}
 
 
 def compute_map_coords(force: bool = False, db_path: str | Path = DB_PATH, map_path: str | Path = MAP_PATH) -> list[dict[str, Any]]:
     path = Path(map_path)
     if path.exists() and not force:
-        return json.loads(path.read_text(encoding="utf-8"))
+        # The frontend refetches this on every page load; skip re-reading and
+        # re-parsing a multi-MB file from disk when it hasn't changed.
+        mtime = path.stat().st_mtime
+        if _MAP_CACHE["mtime"] == mtime and _MAP_CACHE["data"] is not None:
+            return _MAP_CACHE["data"]
+        data = json.loads(path.read_text(encoding="utf-8"))
+        _MAP_CACHE["mtime"] = mtime
+        _MAP_CACHE["data"] = data
+        return data
     conn = connect(db_path)
     rows, mat = _all_embeddings(conn)
     if mat.shape[0] == 0:
@@ -371,13 +409,15 @@ def compute_map_coords(force: bool = False, db_path: str | Path = DB_PATH, map_p
             item["x"] = (idx % 25) / 24 if len(data) > 1 else 0.5
             item["y"] = (idx // 25) / max(1, (len(data) // 25))
         path.write_text(json.dumps(data), encoding="utf-8")
+        _MAP_CACHE["mtime"] = path.stat().st_mtime
+        _MAP_CACHE["data"] = data
         conn.close()
         return data
     if mat.shape[0] >= 3:
         try:
             import umap
 
-            reducer = umap.UMAP(n_components=2, n_neighbors=15, min_dist=0.08, metric="cosine", random_state=42)
+            reducer = umap.UMAP(n_components=2, n_neighbors=30, min_dist=0.9, spread=3.0, metric="cosine", random_state=42)
             coords = reducer.fit_transform(mat)
         except Exception:
             centered = mat - mat.mean(axis=0, keepdims=True)
@@ -388,11 +428,18 @@ def compute_map_coords(force: bool = False, db_path: str | Path = DB_PATH, map_p
     coords = _normalize_xy(np.asarray(coords, dtype=np.float32))
     data = []
     for row, xy in zip(rows, coords):
+        # Truncated: this map payload ships to the browser on every load and
+        # is only ever shown as a placeholder preview while the real
+        # dataset detail fetch is in flight. Full descriptions (often
+        # 300-500+ chars of agency boilerplate) made description alone half
+        # of a ~2.9MB response across ~4.6k datasets for text nothing reads
+        # in full here.
+        description = (row["description"] or "")[:200]
         data.append(
             {
                 "dataset_id": row["dataset_id"],
                 "name": row["name"],
-                "description": row["description"] or "",
+                "description": description,
                 "agency": row["agency"] or "",
                 "suitability_score": row["suitability_score"],
                 "suitability_tone": row["suitability_tone"],
@@ -401,6 +448,8 @@ def compute_map_coords(force: bool = False, db_path: str | Path = DB_PATH, map_p
             }
         )
     path.write_text(json.dumps(data), encoding="utf-8")
+    _MAP_CACHE["mtime"] = path.stat().st_mtime
+    _MAP_CACHE["data"] = data
     conn.close()
     return data
 
@@ -479,8 +528,20 @@ def score_dataset(dataset_id: str, db_path: str | Path = DB_PATH) -> dict[str, A
     return result.to_dict() | {"dataset_id": dataset_id, "name": meta.get("name")}
 
 
+_SUITABILITY_CACHE: dict[str, Any] = {"fingerprint": None, "data": None}
+
+
 def suitability_lookup(db_path: str | Path = DB_PATH) -> dict[str, Any]:
+    # The frontend fetches this in full on every page load; skip re-parsing
+    # every stored suitability_json blob and rebuilding the whole dict when
+    # nothing has been (re)scored since the last call.
     conn = connect(db_path)
+    fingerprint = conn.execute(
+        "SELECT COUNT(*), MAX(suitability_at) FROM datasets WHERE suitability_score IS NOT NULL"
+    ).fetchone()
+    if _SUITABILITY_CACHE["fingerprint"] == fingerprint and _SUITABILITY_CACHE["data"] is not None:
+        conn.close()
+        return _SUITABILITY_CACHE["data"]
     rows = conn.execute(
         "SELECT dataset_id, suitability_score, suitability_tone, suitability_json FROM datasets WHERE suitability_score IS NOT NULL"
     )
@@ -494,6 +555,8 @@ def suitability_lookup(db_path: str | Path = DB_PATH) -> dict[str, Any]:
         payload.setdefault("tone", row["suitability_tone"])
         out[row["dataset_id"]] = payload
     conn.close()
+    _SUITABILITY_CACHE["fingerprint"] = fingerprint
+    _SUITABILITY_CACHE["data"] = out
     return out
 
 

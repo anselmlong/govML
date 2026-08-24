@@ -30,10 +30,17 @@ VISA_GENAI_BASE_URL=
 VISA_GENAI_MODEL=claude-sonnet-4-5-20250929
 VISA_GENAI_EMBED_MODEL=text-embedding-3-small
 ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
 ```
 
 The project works without these values by using deterministic heuristics and
 local deterministic embeddings.
+
+`OPENAI_API_KEY` calls OpenAI's real embeddings API directly (no proxy setup
+required) and takes priority over `VISA_GENAI_*` for `catalog.py embed` and
+catalog search. It gives noticeably cleaner semantic clustering on the map
+than the local hashed fallback, which mostly separates datasets by shared
+boilerplate rather than topic.
 
 ## Catalog
 

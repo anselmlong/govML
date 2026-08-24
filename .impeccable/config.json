@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "frontend/src/style.css"
+        ],
+        "createdAt": "2026-08-24T05:42:18.008Z",
+        "reason": "sanctioned exception: applied to .map-stage, the literal interactive D3 semantic-map canvas, which is the rule's own stated exception for actual map/canvas surfaces"
+      }
+    ]
+  }
+}

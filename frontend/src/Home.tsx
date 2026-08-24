@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { select, zoom } from 'd3';
+import { select, zoom, zoomIdentity, ZoomBehavior } from 'd3';
+import Compass from './Compass';
 import {
   askCatalog,
   CatalogResult,
@@ -19,18 +20,19 @@ import {
   startScoreAll,
   Suitability
 } from './api';
+import MapDots from './MapDots';
 import RunsDock from './RunsDock';
 import { applyTheme, initialTheme, ThemeMode } from './theme';
 
 type Mode = 'search' | 'ask';
 type ColorMode = 'agency' | 'fit';
 
-const PALETTE = ['#4f46e5', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#c026d3', '#65a30d', '#2563eb', '#8a4b2a'];
+const PALETTE = ['#2f6e7f', '#bd5029', '#a5824a', '#5b4636', '#3f7d52', '#6b4e9e', '#2b5a8c', '#8c4b3e', '#4b7a8c', '#7a6a3a'];
 const FIT_COLORS: Record<string, string> = {
-  good: '#059669',
-  okay: '#d97706',
-  marginal: '#737373',
-  blocked: '#dc2626'
+  good: '#3f7d52',
+  okay: '#a5824a',
+  marginal: '#7c8f93',
+  blocked: '#bd5029'
 };
 
 const ASK_EXAMPLES = [
@@ -58,6 +60,7 @@ export default function Home() {
   const gRef = useRef<SVGGElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const behaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [nodes, setNodes] = useState<MapDataset[]>([]);
   const [stats, setStats] = useState<CatalogStats | null>(null);
@@ -108,10 +111,17 @@ export default function Home() {
         select(gRef.current).attr('transform', event.transform.toString());
       });
     svg.call(behavior);
+    behaviorRef.current = behavior;
     return () => {
       svg.on('.zoom', null);
+      behaviorRef.current = null;
     };
   }, [nodes.length]);
+
+  const resetView = useCallback(() => {
+    if (!svgRef.current || !behaviorRef.current) return;
+    select(svgRef.current).transition().duration(360).call(behaviorRef.current.transform, zoomIdentity);
+  }, []);
 
   useEffect(() => {
     if (mode !== 'search') return;
@@ -144,6 +154,20 @@ export default function Home() {
   }, [stats]);
 
   const selectedIds = useMemo(() => new Set(results.map((r) => r.dataset_id)), [results]);
+
+  const dotColorById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const node of nodes) {
+      const fit = suitabilityLookup[node.dataset_id];
+      const color =
+        colorMode === 'fit'
+          ? FIT_COLORS[fit?.tone ?? node.suitability_tone ?? 'marginal'] ?? '#737373'
+          : agencyColors.get(node.agency) ?? PALETTE[Math.abs(hashCode(node.agency)) % PALETTE.length];
+      map.set(node.dataset_id, color);
+    }
+    return map;
+  }, [nodes, colorMode, agencyColors, suitabilityLookup]);
+
   const topFit = useMemo(
     () =>
       [...nodes]
@@ -163,7 +187,7 @@ export default function Home() {
     return Array.from(value || 'unknown').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 7);
   }
 
-  async function chooseDataset(dataset: CatalogResult) {
+  const chooseDataset = useCallback(async (dataset: CatalogResult) => {
     openerRef.current = document.activeElement as HTMLElement;
     setSelected(dataset);
     setSelectedInfo(null);
@@ -178,7 +202,7 @@ export default function Home() {
     } finally {
       setDetailLoading(false);
     }
-  }
+  }, []);
 
   function closeDetail() {
     setSelected(null);
@@ -255,48 +279,37 @@ export default function Home() {
       <section className="map-stage" aria-label="Semantic dataset map">
         <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of Singapore open datasets">
           <g ref={gRef} className="map-nodes">
-            {nodes.map((node) => {
-              const filtered = agencyFilter && node.agency !== agencyFilter;
-              const active = selected?.dataset_id === node.dataset_id;
-              const matched = selectedIds.has(node.dataset_id);
-              return (
-                <circle
-                  key={node.dataset_id}
-                  className={`map-dot ${active ? 'active' : ''} ${matched ? 'matched' : ''}`}
-                  cx={node.x * 940 + 30}
-                  cy={node.y * 640 + 30}
-                  r={active ? 7 : matched ? 5 : 3.2}
-                  fill={nodeColor(node)}
-                  opacity={filtered ? 0.08 : matched || active || !results.length ? 0.86 : 0.24}
-                  tabIndex={0}
-                  onClick={() => chooseDataset(node)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') chooseDataset(node);
-                  }}
-                />
-              );
-            })}
+            <MapDots
+              nodes={nodes}
+              colorFor={dotColorById}
+              agencyFilter={agencyFilter}
+              selectedId={selected?.dataset_id}
+              matchedIds={selectedIds}
+              hasResults={results.length > 0}
+              onSelect={chooseDataset}
+            />
           </g>
         </svg>
         {loading && (
           <div className="map-loading">
-            <span className="spinner" aria-hidden="true" />
-            Building semantic map{stats?.total ? ` of ${stats.total.toLocaleString()} datasets` : ''}...
+            <Compass spinning size={14} />
+            Charting{stats?.total ? ` ${stats.total.toLocaleString()} datasets` : ''}&hellip;
           </div>
         )}
-        <div className="map-hint">Scroll to zoom, drag to pan, click dot</div>
+        <button className="map-compass" onClick={resetView} aria-label="Reset map view" title="Reset view">
+          <Compass size={38} signature />
+        </button>
+        <div className="map-hint">Scroll to zoom &middot; drag to pan &middot; click a marker</div>
       </section>
 
       <header className="topbar">
         <a className="brand-lockup" href="/">
           <span className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+            <Compass size={26} />
           </span>
           <span className="brand-copy">
-            <b>govML</b>
-            <span>Singapore Open Data</span>
+            <h1>govML</h1>
+            <span>Chart of Singapore&rsquo;s open data</span>
           </span>
         </a>
         <div className="nav-actions">
@@ -334,6 +347,7 @@ export default function Home() {
       </header>
 
       <aside className="rail" aria-label="Catalog controls">
+        <div className="rail-group">
         <div className="segmented">
           <span className={`indicator ${mode === 'ask' ? 'pos-1' : ''}`} aria-hidden="true" />
           <button className={mode === 'search' ? 'selected' : ''} onClick={() => setMode('search')}>
@@ -350,7 +364,13 @@ export default function Home() {
               <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.5" />
               <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="housing prices, traffic, tourism" />
+            <input
+              className="search-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="housing prices, traffic, tourism"
+              aria-label="Search datasets"
+            />
           </div>
         ) : (
           <form
@@ -360,9 +380,14 @@ export default function Home() {
               submitAsk();
             }}
           >
-            <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask across the catalog" />
+            <textarea
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ask across the catalog"
+              aria-label="Ask a question across the catalog"
+            />
             <button type="submit" disabled={answering}>
-              {answering && <span className="spinner" aria-hidden="true" />} {answering ? 'Thinking' : 'Ask'}
+              {answering && <Compass spinning size={14} />} {answering ? 'Thinking' : 'Ask'}
             </button>
           </form>
         )}
@@ -378,29 +403,38 @@ export default function Home() {
         )}
 
         {answer && <div className="answer">{renderAnswer(answer)}</div>}
+        </div>
 
-        <div className="row-between">
-          <span>Color</span>
-          <div className="mini-toggle">
-            <span className={`indicator ${colorMode === 'fit' ? 'pos-1' : ''}`} aria-hidden="true" />
-            <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
-              Agency
-            </button>
-            <button className={colorMode === 'fit' ? 'selected' : ''} onClick={() => setColorMode('fit')}>
-              ML fit
+        <div className="rail-divider" role="separator" />
+
+        <div className="rail-group rail-group-quiet">
+          <div className="row-between">
+            <span>Color</span>
+            <div className="mini-toggle">
+              <span className={`indicator ${colorMode === 'fit' ? 'pos-1' : ''}`} aria-hidden="true" />
+              <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
+                Agency
+              </button>
+              <button className={colorMode === 'fit' ? 'selected' : ''} onClick={() => setColorMode('fit')}>
+                ML fit
+              </button>
+            </div>
+          </div>
+
+          <div className="score-box">
+            <span>
+              ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
+            </span>
+            <button onClick={startScoring} disabled={scoreStatus?.running}>
+              {scoreStatus?.running && <Compass spinning size={14} />} {scoreStatus?.running ? 'Scoring' : 'Score all'}
             </button>
           </div>
         </div>
 
-        <div className="score-box">
-          <span>
-            ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
-          </span>
-          <button onClick={startScoring} disabled={scoreStatus?.running}>
-            {scoreStatus?.running && <span className="spinner" aria-hidden="true" />} {scoreStatus?.running ? 'Scoring' : 'Score all'}
-          </button>
-        </div>
+        <div className="rail-divider" role="separator" />
 
+        <div className="rail-group">
+        <p className="section-label">Agencies</p>
         <div className="chips" aria-label="Agency filter">
           <button className={!agencyFilter ? 'selected' : ''} onClick={() => setAgencyFilter(null)}>
             All
@@ -417,6 +451,10 @@ export default function Home() {
           ))}
         </div>
 
+        <p className="section-label">
+          Manifest{stats?.total ? <span className="section-count">{listItems.length} of {stats.total.toLocaleString()}</span> : null}
+        </p>
+
         {showSkeleton ? (
           <div className="result-skeleton" aria-hidden="true">
             {[0, 1, 2, 3].map((row) => (
@@ -431,8 +469,9 @@ export default function Home() {
           </p>
         ) : (
           <div className="result-list">
-            {listItems.map((item) => (
+            {listItems.map((item, index) => (
               <button key={item.dataset_id} onClick={() => chooseDataset(item)}>
+                <span className="manifest-index">{String(index + 1).padStart(2, '0')}</span>
                 <span className="agency-dot" style={{ background: nodeColor(item) }} />
                 <b>{item.name}</b>
                 <small>
@@ -442,6 +481,7 @@ export default function Home() {
             ))}
           </div>
         )}
+        </div>
       </aside>
 
       {selected && (
@@ -528,7 +568,7 @@ export default function Home() {
               Skip correlation
             </label>
             <button className="launch-button" onClick={launchRun} disabled={launching}>
-              {launching && <span className="spinner" aria-hidden="true" />} {launching ? 'Launching' : 'Run ML'}
+              {launching && <Compass spinning size={14} />} {launching ? 'Launching' : 'Run ML'}
             </button>
           </div>
         </aside>

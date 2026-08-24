@@ -92,12 +92,27 @@ export default function PipelineStages({ lines, failed = false }: { lines: strin
   return (
     <section className="stage-card">
       <div className="stage-grid">
-        {STAGES.map((stage, index) => (
-          <div className={`stage ${parsed.statuses[index]}`} key={stage.key}>
-            <span>{index + 1}</span>
-            <b>{stage.label}</b>
-          </div>
-        ))}
+        {STAGES.map((stage, index) => {
+          const status = parsed.statuses[index];
+          return (
+            <div className={`stage ${status}`} key={stage.key}>
+              <span key={status}>
+                {status === 'completed' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2.5 6.2L4.8 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : status === 'failed' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <b>{stage.label}</b>
+            </div>
+          );
+        })}
       </div>
       <div className="facts-grid">
         <span>Rows</span>

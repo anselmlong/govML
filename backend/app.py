@@ -20,6 +20,7 @@ import pandas as pd
 import requests
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 class AskRequest(BaseModel):
@@ -99,19 +101,27 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# A bare `[-\d.eE]+` class is greedy enough to swallow the sentence-ending
+# period pipeline.py always prints right after the last number on this line
+# (e.g. "R2=0.7305."), so float() on the captured text raised and silently
+# killed the log-draining thread before it ever reached "completed" -
+# runs finished for real but stayed stuck showing "running" forever.
+_NUMBER = r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
+
+
 def _parse_done(line: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
     m = re.search(r"done\. best:\s*(.*?)\s{2,}", line)
     if m:
         out["best_model"] = m.group(1).strip()
-    mae = re.search(r"MAE=([-\d.eE]+)", line)
-    r2 = re.search(r"R2=([-\d.eE]+)", line)
+    mae = re.search(rf"MAE=({_NUMBER})", line)
+    r2 = re.search(rf"R2=({_NUMBER})", line)
     if mae:
         out["mae"] = float(mae.group(1))
     if r2:
         out["r2"] = float(r2.group(1))
-    acc = re.search(r"acc=([-\d.eE]+)", line)
-    f1 = re.search(r"f1=([-\d.eE]+)", line)
+    acc = re.search(rf"acc=({_NUMBER})", line)
+    f1 = re.search(rf"f1=({_NUMBER})", line)
     if acc:
         out["accuracy"] = float(acc.group(1))
     if f1:
@@ -126,7 +136,12 @@ def _drain_process(run_id: str, proc: subprocess.Popen, log_path: Path) -> None:
         for line in proc.stdout:
             log.write(line)
             if line.startswith("done. best:"):
-                final_fields.update(_parse_done(line))
+                try:
+                    final_fields.update(_parse_done(line))
+                except Exception:
+                    # The run still succeeded; a busted summary-line parse
+                    # must not strand it showing "running" forever.
+                    pass
     code = proc.wait()
     active_procs.pop(run_id, None)
 

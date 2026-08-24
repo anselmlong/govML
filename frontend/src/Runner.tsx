@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { friendlyError, getRun, RunRecord, streamRun } from './api';
+import Compass from './Compass';
 import PipelineStages from './PipelineStages';
+import { useCountUp } from './useCountUp';
 
 export default function Runner() {
   const { runId = '' } = useParams();
@@ -28,6 +30,11 @@ export default function Runner() {
 
   const completed = run?.status === 'completed';
   const failed = run?.status === 'failed';
+  const isClassification = run?.mae === null || run?.mae === undefined;
+  const mae = useCountUp(completed ? run?.mae : null);
+  const r2 = useCountUp(completed ? run?.r2 : null);
+  const accuracy = useCountUp(completed ? run?.accuracy : null);
+  const f1 = useCountUp(completed ? run?.f1 : null);
 
   return (
     <main className="runner-shell">
@@ -39,7 +46,7 @@ export default function Runner() {
           <h1>{run?.name ?? runId}</h1>
         </div>
         <span className={`status-badge ${run?.status ?? 'running'}`}>
-          {run?.status === 'running' && <span className="spinner" aria-hidden="true" />} {run?.status ?? 'loading'}
+          {run?.status === 'running' && <Compass spinning size={13} />} {run?.status ?? 'loading'}
         </span>
       </header>
 
@@ -52,14 +59,29 @@ export default function Runner() {
             <span>Best model</span>
             <b>{run.best_model ?? 'Completed'}</b>
           </div>
-          <div>
-            <span>MAE</span>
-            <b>{run.mae?.toPrecision(4) ?? 'NA'}</b>
-          </div>
-          <div>
-            <span>R2</span>
-            <b>{run.r2?.toPrecision(4) ?? 'NA'}</b>
-          </div>
+          {isClassification ? (
+            <>
+              <div>
+                <span>Accuracy</span>
+                <b>{accuracy !== null ? accuracy.toPrecision(4) : 'NA'}</b>
+              </div>
+              <div>
+                <span>F1</span>
+                <b>{f1 !== null ? f1.toPrecision(4) : 'NA'}</b>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <span>MAE</span>
+                <b>{mae !== null ? mae.toPrecision(4) : 'NA'}</b>
+              </div>
+              <div>
+                <span>R2</span>
+                <b>{r2 !== null ? r2.toPrecision(4) : 'NA'}</b>
+              </div>
+            </>
+          )}
           <a href={`/reports/${run.run_id}`} target="_blank" rel="noreferrer">
             Open report
           </a>

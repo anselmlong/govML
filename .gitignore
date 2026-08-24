@@ -15,3 +15,5 @@ frontend/dist/
 
 *.tar
 *.pkl
+
+.impeccable/hook.cache.json

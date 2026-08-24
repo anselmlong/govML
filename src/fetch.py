@@ -35,6 +35,9 @@ def _read_cache(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+MAX_RETRY_ATTEMPTS = 5
+
+
 def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
     attempts = 0
     while True:
@@ -56,6 +59,13 @@ def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
         if resp.status_code == 413:
             return {"__status__": 413}
         if resp.status_code in {429, 502, 503, 504}:
+            # Bounded: an upstream stuck in sustained rate-limiting or an
+            # outage used to retry every 5s forever, permanently pinning a
+            # worker thread and, for background jobs looping over many
+            # datasets, eventually starving the whole API of threads.
+            attempts += 1
+            if attempts >= MAX_RETRY_ATTEMPTS:
+                raise RuntimeError(f"data.gov.sg kept returning {resp.status_code} for {resource_id} after {attempts} attempts")
             time.sleep(5)
             continue
         resp.raise_for_status()
@@ -81,11 +91,14 @@ def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | 
         if resp.status_code == 404:
             raise ValueError(f"missing dataset resource: {resource_id}")
         if resp.status_code in {429, 502, 503, 504}:
+            attempts += 1
+            if attempts >= MAX_RETRY_ATTEMPTS:
+                raise RuntimeError(f"data.gov.sg kept returning {resp.status_code} for {resource_id} after {attempts} attempts")
             time.sleep(5)
             continue
         resp.raise_for_status()
         payload = resp.json()
-        if payload.get("code") not in {None, 1}:
+        if payload.get("code") not in {None, 0}:
             raise RuntimeError(f"data.gov.sg list-rows failed for {resource_id}: {payload}")
         return payload
 
