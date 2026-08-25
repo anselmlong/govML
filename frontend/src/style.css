@@ -493,6 +493,7 @@ code {
 .score-box button,
 .run-config button,
 .log-card button,
+.catalog-build button,
 .text-button {
   display: inline-flex;
   align-items: center;
@@ -508,7 +509,8 @@ code {
 .ask-form button:hover,
 .score-box button:hover,
 .run-config button:hover,
-.log-card button:hover {
+.log-card button:hover,
+.catalog-build button:hover {
   background: var(--bearing);
   border-color: var(--bearing);
   color: #ffffff;
@@ -726,6 +728,59 @@ button:disabled:hover {
   color: var(--muted);
   line-height: 1.55;
   font-size: 14px;
+}
+
+.catalog-build {
+  display: grid;
+  gap: 14px;
+  padding: 12px 6px 4px;
+}
+
+.catalog-build p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.build-error {
+  color: var(--bearing);
+}
+
+.catalog-build-stages {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.catalog-build-stages::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: var(--line);
+  z-index: 0;
+}
+
+.catalog-build-stages .stage {
+  min-height: 58px;
+  padding: 7px;
+}
+
+.catalog-build-stages .stage span {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.catalog-build-detail {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
 .agency-dot {

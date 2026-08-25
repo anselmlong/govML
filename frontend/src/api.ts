@@ -116,6 +116,16 @@ export interface ScoreStatus {
   last?: unknown;
 }
 
+export interface CatalogBuildStatus {
+  running: boolean;
+  phase: 'ingest' | 'embed' | 'map' | 'done' | null;
+  detail: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  total_ingested: number | null;
+}
+
 export function friendlyError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   if (/failed to fetch|networkerror|load failed/i.test(raw)) {
@@ -165,6 +175,8 @@ export const startScoreAll = (limit?: number, resume = true, rescoreBelow?: numb
   return postJson<{ started: boolean }>(`/api/catalog/score-all?${params.toString()}`);
 };
 export const askCatalog = (query: string, topK = 5) => postJson<AskResult>('/api/ask', { query, top_k: topK });
+export const getCatalogBuildStatus = () => getJson<CatalogBuildStatus>('/api/catalog/build-status');
+export const startCatalogBuild = () => postJson<{ started: boolean }>('/api/catalog/build');
 export const getRuns = () => getJson<RunRecord[]>('/api/runs');
 export const getRun = (runId: string) => getJson<RunRecord>(`/api/runs/${encodeURIComponent(runId)}`);
 export const startRun = (request: RunRequest) => postJson<{ run_id: string; reused: boolean }>('/api/runs', request);

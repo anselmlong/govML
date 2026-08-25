@@ -39,6 +39,16 @@ RUNS_FILE = ROOT / "backend" / "runs.json"
 active_procs: dict[str, subprocess.Popen] = {}
 score_lock = threading.Lock()
 score_state: dict[str, Any] = {"running": False, "started_at": None, "completed_at": None, "last": None}
+catalog_build_lock = threading.Lock()
+catalog_build_state: dict[str, Any] = {
+    "running": False,
+    "phase": None,
+    "detail": None,
+    "started_at": None,
+    "completed_at": None,
+    "error": None,
+    "total_ingested": None,
+}
 
 app = FastAPI(title="govML")
 app.add_middleware(
@@ -284,6 +294,53 @@ def api_score_all(background: BackgroundTasks, limit: int | None = None, resume:
     if score_state.get("running"):
         raise HTTPException(409, "catalog scoring is already in progress")
     background.add_task(_score_all_job, limit, resume, rescore_below)
+    return {"started": True}
+
+
+def _catalog_build_job() -> None:
+    with catalog_build_lock:
+        catalog_build_state.update(
+            {
+                "running": True,
+                "phase": "ingest",
+                "detail": None,
+                "started_at": _utc_now(),
+                "completed_at": None,
+                "error": None,
+                "total_ingested": None,
+            }
+        )
+    try:
+        def on_ingest(page: int, pages: int) -> None:
+            catalog_build_state["detail"] = f"page {page} of {pages}"
+
+        total = catalog.ingest(on_progress=on_ingest)
+        catalog_build_state.update({"phase": "embed", "detail": None, "total_ingested": total})
+
+        def on_embed(done: int, count: int) -> None:
+            catalog_build_state["detail"] = f"{done:,} of {count:,} datasets"
+
+        catalog.embed(on_progress=on_embed)
+
+        catalog_build_state.update({"phase": "map", "detail": None})
+        catalog.compute_map_coords(force=True)
+        catalog_build_state.update({"phase": "done", "detail": None})
+    except Exception as exc:
+        catalog_build_state["error"] = str(exc)
+    finally:
+        catalog_build_state.update({"running": False, "completed_at": _utc_now()})
+
+
+@app.get("/api/catalog/build-status")
+def api_catalog_build_status() -> dict[str, Any]:
+    return dict(catalog_build_state)
+
+
+@app.post("/api/catalog/build", status_code=202)
+def api_catalog_build(background: BackgroundTasks) -> dict[str, Any]:
+    if catalog_build_state.get("running"):
+        raise HTTPException(409, "catalog build already in progress")
+    background.add_task(_catalog_build_job)
     return {"started": True}
 
 

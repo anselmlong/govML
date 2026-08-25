@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { select, zoom, zoomIdentity, ZoomBehavior } from 'd3';
+import CatalogBuild from './CatalogBuild';
 import Compass from './Compass';
 import {
   askCatalog,
@@ -85,22 +86,33 @@ export default function Home() {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
-    Promise.allSettled([getCatalogMap(), getCatalogStats(), getSuitabilityLookup(), getScoreStatus()])
-      .then(([mapResult, statsResult, fitResult, scoreResult]) => {
-        if (!mounted) return;
+  const loadCatalog = useCallback(() => {
+    return Promise.allSettled([getCatalogMap(), getCatalogStats(), getSuitabilityLookup(), getScoreStatus()]).then(
+      ([mapResult, statsResult, fitResult, scoreResult]) => {
         if (mapResult.status === 'fulfilled') setNodes(mapResult.value);
         if (statsResult.status === 'fulfilled') setStats(statsResult.value);
         if (fitResult.status === 'fulfilled') setSuitabilityLookup(fitResult.value);
         if (scoreResult.status === 'fulfilled') setScoreStatus(scoreResult.value);
-      })
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadCatalog()
       .catch((err: unknown) => setError(friendlyError(err)))
       .finally(() => mounted && setLoading(false));
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadCatalog]);
+
+  const handleCatalogBuilt = useCallback(() => {
+    setLoading(true);
+    loadCatalog()
+      .catch((err: unknown) => setError(friendlyError(err)))
+      .finally(() => setLoading(false));
+  }, [loadCatalog]);
 
   useEffect(() => {
     if (!svgRef.current || !gRef.current) return;
@@ -452,7 +464,7 @@ export default function Home() {
         </div>
 
         <p className="section-label">
-          Manifest{stats?.total ? <span className="section-count">{listItems.length} of {stats.total.toLocaleString()}</span> : null}
+          Datasets{stats?.total ? <span className="section-count">{listItems.length} of {stats.total.toLocaleString()}</span> : null}
         </p>
 
         {showSkeleton ? (
@@ -464,9 +476,7 @@ export default function Home() {
         ) : searching && listItems.length === 0 ? (
           <p className="empty-state">No datasets match &ldquo;{query}&rdquo;. Try a broader term, or browse by agency below.</p>
         ) : catalogEmpty ? (
-          <p className="empty-state">
-            No datasets ingested yet. Run <code>python catalog.py ingest</code> to populate the catalog.
-          </p>
+          <CatalogBuild onComplete={handleCatalogBuilt} />
         ) : (
           <div className="result-list">
             {listItems.map((item, index) => (

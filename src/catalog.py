@@ -7,7 +7,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 import numpy as np
 import pandas as pd
@@ -143,7 +143,12 @@ def upsert_datasets(conn: sqlite3.Connection, datasets: Iterable[Dataset]) -> in
     return len(rows)
 
 
-def ingest(refresh: bool = False, max_pages: int | None = None, db_path: str | Path = DB_PATH) -> int:
+def ingest(
+    refresh: bool = False,
+    max_pages: int | None = None,
+    db_path: str | Path = DB_PATH,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> int:
     conn = connect(db_path)
     if refresh:
         conn.execute("DELETE FROM datasets")
@@ -162,6 +167,8 @@ def ingest(refresh: bool = False, max_pages: int | None = None, db_path: str | P
         batch = [_dataset_from_raw(raw) for raw in raw_datasets]
         total += upsert_datasets(conn, batch)
         print(f"ingested page {page}/{pages}: {len(batch)} datasets")
+        if on_progress:
+            on_progress(page, pages)
         if page >= pages:
             break
         page += 1
@@ -206,7 +213,14 @@ def _corpus_idf(conn: sqlite3.Connection) -> dict[str, float]:
     return idf
 
 
-def embed(model: str = DEFAULT_EMBED_MODEL, batch_size: int = 64, limit: int | None = None, force: bool = False, db_path: str | Path = DB_PATH) -> int:
+def embed(
+    model: str = DEFAULT_EMBED_MODEL,
+    batch_size: int = 64,
+    limit: int | None = None,
+    force: bool = False,
+    db_path: str | Path = DB_PATH,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> int:
     conn = connect(db_path)
     idf = _corpus_idf(conn)
     rows = _rows_to_embed(conn, model, limit, force)
@@ -225,6 +239,8 @@ def embed(model: str = DEFAULT_EMBED_MODEL, batch_size: int = 64, limit: int | N
             done += 1
         conn.commit()
         print(f"embedded {done}/{len(rows)} via {result.provenance}")
+        if on_progress:
+            on_progress(done, len(rows))
     conn.close()
     return done
 
