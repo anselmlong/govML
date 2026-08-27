@@ -38,6 +38,15 @@ def _read_cache(path: Path) -> pd.DataFrame:
 MAX_RETRY_ATTEMPTS = 5
 
 
+class GoneError(ValueError):
+    """Dataset definitively retired / removed from data.gov.sg (404). Permanent."""
+
+
+class ThrottledError(RuntimeError):
+    """data.gov.sg is transiently throttling us (silent empty-200 / 429 / 5xx),
+    but the dataset is alive. Caller may retry later."""
+
+
 def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
     attempts = 0
     while True:
@@ -55,7 +64,7 @@ def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
             continue
 
         if resp.status_code == 404:
-            raise ValueError(f"missing dataset resource: {resource_id}")
+            raise GoneError(f"missing dataset resource: {resource_id}")
         if resp.status_code == 413:
             return {"__status__": 413}
         if resp.status_code in {429, 502, 503, 504}:
@@ -77,10 +86,11 @@ def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
 
 def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | None = None) -> dict[str, Any]:
     attempts = 0
+    eff_limit = limit
     while True:
         try:
             url = next_url or V2_LIST_ROWS.format(dataset_id=resource_id)
-            params = None if next_url else {"limit": limit, "offset": offset}
+            params = None if next_url else {"limit": eff_limit, "offset": offset}
             resp = requests.get(url, params=params, timeout=30)
         except (requests.Timeout, requests.ConnectionError) as exc:
             attempts += 1
@@ -89,15 +99,39 @@ def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | 
             time.sleep(2 ** attempts)
             continue
         if resp.status_code == 404:
-            raise ValueError(f"missing dataset resource: {resource_id}")
+            raise GoneError(f"missing dataset resource: {resource_id}")
+        if resp.status_code == 413:
+            # payload too large: halve the page and retry instead of giving up
+            eff_limit = max(100, eff_limit // 2)
+            if eff_limit < 200:
+                raise RuntimeError(f"payload too large for {resource_id} even at page={eff_limit}")
+            attempts += 1
+            if attempts >= 6:
+                raise RuntimeError(f"payload too large for {resource_id} after shrinking pages")
+            time.sleep(1)
+            continue
         if resp.status_code in {429, 502, 503, 504}:
             attempts += 1
             if attempts >= MAX_RETRY_ATTEMPTS:
                 raise RuntimeError(f"data.gov.sg kept returning {resp.status_code} for {resource_id} after {attempts} attempts")
             time.sleep(5)
             continue
+        # data.gov.sg silently rate-limits by returning HTTP 200 with an empty/
+        # HTML body (content-length: 0) instead of a clean 429. The dataset is alive;
+        # this is a throttle, not a dead id. Treat it as retriable (ThrottledError)
+        # rather than a permanent failure so callers can back off and retry later.
+        try:
+            payload = resp.json()
+        except ValueError:
+            attempts += 1
+            if attempts >= MAX_RETRY_ATTEMPTS:
+                raise ThrottledError(
+                    f"data.gov.sg returned non-JSON body ({resp.status_code}) for {resource_id} "
+                    f"after {attempts} attempts (throttled, dataset alive)"
+                )
+            time.sleep(min(60, 10 * (2 ** attempts)))
+            continue
         resp.raise_for_status()
-        payload = resp.json()
         if payload.get("code") not in {None, 0}:
             raise RuntimeError(f"data.gov.sg list-rows failed for {resource_id}: {payload}")
         return payload
