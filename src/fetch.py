@@ -64,7 +64,16 @@ def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
             continue
 
         if resp.status_code == 404:
-            raise GoneError(f"missing dataset resource: {resource_id}")
+            # Ambiguous: data.gov.sg occasionally answers a *live* id with 404
+            # ("No table found for dataset ID") during a silent-throttle window —
+            # we proved such ids flap back to 200 within seconds. So a first-seen
+            # 404 is NOT proof the dataset is retired. Back off and retry; only
+            # raise GoneError if the 404 persists across the retry window.
+            attempts += 1
+            if attempts >= MAX_RETRY_ATTEMPTS:
+                raise GoneError(f"missing dataset resource: {resource_id}")
+            time.sleep(min(5, 2 ** attempts))
+            continue
         if resp.status_code == 413:
             return {"__status__": 413}
         if resp.status_code in {429, 502, 503, 504}:
@@ -99,7 +108,15 @@ def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | 
             time.sleep(2 ** attempts)
             continue
         if resp.status_code == 404:
-            raise GoneError(f"missing dataset resource: {resource_id}")
+            # Ambiguous: data.gov.sg occasionally answers a *live* v2 id with
+            # 404 ("No table found for dataset ID") mid-throttle; it flaps back
+            # to 200 within seconds. A first-seen 404 is NOT proof of retirement.
+            # Back off and retry; only raise GoneError if it persists.
+            attempts += 1
+            if attempts >= MAX_RETRY_ATTEMPTS:
+                raise GoneError(f"missing dataset resource: {resource_id}")
+            time.sleep(min(5, 2 ** attempts))
+            continue
         if resp.status_code == 413:
             # payload too large: halve the page and retry instead of giving up
             eff_limit = max(100, eff_limit // 2)
