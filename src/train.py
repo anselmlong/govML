@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 import time
 import warnings
 from dataclasses import dataclass, field
@@ -12,6 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
+from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.ensemble import (
     ExtraTreesRegressor,
     GradientBoostingRegressor,
@@ -70,6 +72,9 @@ class TrainResult:
     numeric_features: list[str] = field(default_factory=list)
     categorical_features: list[str] = field(default_factory=list)
     class_names: list[str] = field(default_factory=list)
+    verdict_text: str = ""
+    verdict_tone: str = "okay"
+    beats_baseline: bool = False
 
 
 def _normalize_task(task_type: str | None) -> str | None:
@@ -112,8 +117,45 @@ def _one_hot() -> OneHotEncoder:
         return OneHotEncoder(handle_unknown="ignore", sparse=False)
 
 
+_ID_LIKE_RE = re.compile(r"(^|[_\s-])(id|uuid|guid|vault_id|_id)([_\s-]|$)|index|no$", re.IGNORECASE)
+
+
+def _is_id_like(name: str) -> bool:
+    lower = name.lower().strip()
+    if lower in {"id", "_id", "uuid", "guid", "vault_id", "row_id", "record_id", "index", "idx", "no", "sno", "sr_no"}:
+        return True
+    return bool(_ID_LIKE_RE.search(lower))
+
+
+def _is_time_like(name: str, series: pd.Series) -> bool:
+    lower = name.lower()
+    if any(k in lower for k in ("year", "date", "month", "quarter", "time", "week", "day")):
+        return True
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return True
+    if pd.api.types.is_numeric_dtype(series):
+        nums = pd.to_numeric(series, errors="coerce").dropna()
+        return len(nums) > 0 and float(nums.between(1900, 2100).mean()) >= 0.85
+    return False
+
+
 def _feature_columns(df: pd.DataFrame, target: str) -> tuple[list[str], list[str]]:
-    features = [c for c in df.columns if c != target and df[c].notna().any()]
+    # ID-like columns are excluded outright: they carry no generalizable signal,
+    # and letting trees split on them produces models that memorize row order.
+    features = [
+        c
+        for c in df.columns
+        if c != target
+        and df[c].notna().any()
+        and not _is_id_like(c)
+        # a column with a unique value per row is an identifier in disguise —
+        # EXCEPT time axes (year/date), which are legitimate trend features
+        and not (
+            df[c].nunique(dropna=True) == len(df)
+            and len(df) > 20
+            and not _is_time_like(c, df[c])
+        )
+    ]
     numeric = [c for c in features if pd.api.types.is_numeric_dtype(df[c])]
     categorical = [c for c in features if c not in numeric]
     return numeric, categorical
@@ -140,11 +182,46 @@ def build_preprocessor(numeric: list[str], categorical: list[str]) -> ColumnTran
     return ColumnTransformer(transformers, remainder="drop", sparse_threshold=0.0)
 
 
+def _find_entity_column(df: pd.DataFrame, exclude: set[str]) -> str | None:
+    """Find a panel/entity column — a repeating categorical that identifies a physical
+    unit (stall, school, block, vehicle) appearing across multiple rows. Random-splitting
+    on data like this leaks: the same unit lands in both train and test and the model
+    merely memorizes its rows, producing fake R2=1.0."""
+    best, best_score = None, 1.0
+    n = len(df)
+    for c in df.columns:
+        if c in exclude:
+            continue
+        if _is_id_like(c) or _is_time_like(c, df[c]):
+            continue
+        n_uniq = df[c].nunique(dropna=True)
+        if n_uniq < 2 or n_uniq > n / 2:
+            continue
+        repeat = n / n_uniq  # avg rows per group
+        if 2.0 <= repeat <= n / 3:
+            if repeat > best_score:
+                best_score = repeat
+                best = c
+    return best
+
+
 def _time_split(df: pd.DataFrame, target: str, holdout_months: int = 6) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, str]:
+    # exact-duplicate rows are pure leakage: remove them before any split
+    if df.duplicated().any():
+        df = df.drop_duplicates()
     X = df.drop(columns=[target])
     y = df[target]
     time_col = find_time_column(df)
     if not time_col:
+        # no time axis: use a group split whenever a repeating entity column exists,
+        # so a physical unit never straddles train/test; otherwise random split.
+        entity = _find_entity_column(df, {target})
+        if entity:
+            from sklearn.model_selection import GroupShuffleSplit
+
+            groups = df[entity].values
+            tr, te = next(GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=0).split(X, y, groups))
+            return X.iloc[tr], X.iloc[te], y.iloc[tr], y.iloc[te], f"group:{entity}"
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
         return X_train, X_test, y_train, y_test, "random"
 
@@ -169,6 +246,8 @@ def _time_split(df: pd.DataFrame, target: str, holdout_months: int = 6) -> tuple
 
 def _regression_models() -> dict[str, Any]:
     models: dict[str, Any] = {
+        # naive baseline first: if nothing beats this, the fancy models add no value
+        "Baseline (mean)": DummyRegressor(strategy="mean"),
         "Ridge": Ridge(alpha=1.0),
         "Lasso": Lasso(alpha=100.0, max_iter=5000),
         "RandomForest": RandomForestRegressor(n_estimators=120, max_depth=18, n_jobs=-1, random_state=0),
@@ -208,6 +287,8 @@ def _regression_models() -> dict[str, Any]:
 
 def _classification_models(task_type: str) -> dict[str, Any]:
     models: dict[str, Any] = {
+        # majority-class baseline for an honest reference point
+        "Baseline (majority)": DummyClassifier(strategy="most_frequent"),
         "LogisticRegression": LogisticRegression(max_iter=1000),
         "RandomForest": RandomForestClassifier(n_estimators=120, max_depth=18, n_jobs=-1, random_state=0),
         "HistGradientBoosting": HistGradientBoostingClassifier(max_iter=300, max_depth=8, learning_rate=0.08, random_state=0),
@@ -298,7 +379,7 @@ def _add_stack_model(
     y_train: np.ndarray | pd.Series,
     y_test: np.ndarray | pd.Series,
 ) -> ModelRun | None:
-    nonlinear = [r for r in leaderboard if r.name not in {"Ridge", "Lasso", "LogisticRegression"}]
+    nonlinear = [r for r in leaderboard if r.name not in {"Ridge", "Lasso", "LogisticRegression"} and not r.name.startswith("Baseline")]
     nonlinear = sorted(nonlinear, key=lambda r: _sort_key(task_type, r))[:3]
     if len(nonlinear) < 2:
         return None
@@ -407,7 +488,11 @@ def train_models(df: pd.DataFrame, target: str, task_type: str | None = None) ->
         except Exception as exc:
             print(f"[{name}] skipped: {exc}")
 
-    stack = _add_stack_model(detected, leaderboard, model_bank, numeric, categorical, X_train, X_test, y_train, y_test)
+    stack = None
+    try:
+        stack = _add_stack_model(detected, leaderboard, model_bank, numeric, categorical, X_train, X_test, y_train, y_test)
+    except Exception as exc:
+        print(f"[StackedTop3] skipped: {exc}")
     if stack:
         leaderboard.append(stack)
         _print_model_line(detected, stack)
@@ -416,6 +501,58 @@ def train_models(df: pd.DataFrame, target: str, task_type: str | None = None) ->
 
     leaderboard.sort(key=lambda r: _sort_key(detected, r))
     best = leaderboard[0]
+    baseline = next((r for r in leaderboard if r.name.startswith("Baseline")), None)
+
+    # honest verdicts: compare the winner to the naive baseline and flag
+    # small-sample runs. A model that can't beat "predict the average" has no
+    # value, and 26-row test sets deserve an exploratory warning, not a
+    # confident headline.
+    beats_baseline = False
+    if baseline is not None:
+        if detected == TASK_REGRESSION:
+            beats_baseline = _sort_key(detected, best) < _sort_key(detected, baseline) - 1e-9
+        else:
+            beats_baseline = _sort_key(detected, best) < _sort_key(detected, baseline) - 1e-9
+
+    r2_val = float(best.metrics.get("R2", float("nan"))) if detected == TASK_REGRESSION else float("nan")
+    n_train = len(X_train)
+    if not beats_baseline and baseline is not None:
+        if detected == TASK_REGRESSION:
+            verdict_text = (
+                f"NOT USABLE: no model beat the naive mean baseline (best {best.name} RMSE={best.metrics.get('RMSE', float('nan')):.4g} "
+                f"vs baseline {baseline.metrics.get('RMSE', float('nan')):.4g}). The available features carry no predictive signal for "
+                f"{target}. Treat any numbers below as descriptive statistics only."
+            )
+        else:
+            verdict_text = (
+                f"NOT USABLE: no model beat the naive majority-class baseline (best {best.name} "
+                f"acc={best.metrics.get('accuracy', float('nan')):.3f} vs baseline {baseline.metrics.get('accuracy', float('nan')):.3f}). "
+                f"The features add no discrimination for {target} over just predicting the majority class."
+            )
+        verdict_tone = "unusable"
+    elif detected == TASK_REGRESSION and r2_val == r2_val and r2_val < 0.1:
+        verdict_text = (
+            f"WEAK: best model barely explains variance (R2={r2_val:.3f}, MAE={best.metrics.get('MAE', float('nan')):.4g}). "
+            f"Marginal improvement over a naive guess — do not rely on these predictions."
+        )
+        verdict_tone = "weak"
+    elif n_train < 30:
+        verdict_text = (
+            f"EXPLORATORY: trained on only {n_train} rows. Metrics are unstable at this sample size and the split leaves very few "
+            f"test rows. Directionally interesting at most — do not use for decisions."
+        )
+        verdict_tone = "exploratory"
+    else:
+        verdict_text = (
+            f"USABLE with caution: best model {best.name} beats the naive baseline "
+            f"({best.metrics.get('RMSE', float('nan')):.4g} vs {baseline.metrics.get('RMSE', float('nan')):.4g} RMSE)"
+            if baseline is not None
+            else f"Best model explains R2={r2_val:.3f} with MAE={best.metrics.get('MAE', float('nan')):.4g}."
+        )
+        if detected == TASK_REGRESSION and r2_val == r2_val:
+            verdict_text += f" R2={r2_val:.3f} on held-out data."
+        verdict_tone = "good" if (detected != TASK_REGRESSION or r2_val >= 0.5) else "okay"
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="X does not have valid feature names.*")
         y_pred = best.pipeline.predict(X_test)
@@ -438,4 +575,7 @@ def train_models(df: pd.DataFrame, target: str, task_type: str | None = None) ->
         numeric_features=numeric,
         categorical_features=categorical,
         class_names=class_names,
+        verdict_text=verdict_text,
+        verdict_tone=verdict_tone,
+        beats_baseline=beats_baseline,
     )

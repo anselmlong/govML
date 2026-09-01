@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getRuns, RunRecord } from './api';
+import { getRuns, reportUrl, RunRecord } from './api';
 
 export default function RunsDock() {
   const [runs, setRuns] = useState<RunRecord[]>([]);
@@ -35,7 +35,7 @@ export default function RunsDock() {
               </div>
               <Link to={`/run/${run.run_id}`}>Log</Link>
               {run.status === 'completed' && (
-                <a href={`/reports/${run.run_id}`} target="_blank" rel="noreferrer">
+                <a href={reportUrl(run.run_id)} target="_blank" rel="noreferrer">
                   Report
                 </a>
               )}

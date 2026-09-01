@@ -1,0 +1,15 @@
+[Unit]
+Description=govML FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/govml
+Environment=PATH=/home/ubuntu/govml/.venv/bin:/usr/bin:/bin
+ExecStart=/home/ubuntu/govml/.venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8126
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://api.govml.anselmlong.com/api/$1" },
+    { "source": "/reports/:id", "destination": "https://api.govml.anselmlong.com/reports/:id" }
+  ]
+}

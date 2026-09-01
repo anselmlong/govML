@@ -176,9 +176,12 @@ def execute_plan(df: pd.DataFrame, plan: PreprocessPlan, target: str | None = No
         try:
             op = step.op
             col = step.column
-            if op == "coerce_numeric" and col in out.columns:
-                out[col] = _coerce_numeric(out[col])
-                notes.append(f"coerced {col} to numeric")
+            if op == "coerce_numeric":
+                if col in out.columns:
+                    out[col] = _coerce_numeric(out[col])
+                    notes.append(f"coerced {col} to numeric")
+                else:
+                    notes.append(f"coerce_numeric skipped: column '{col}' not found")
             elif op == "parse_year_month" and col in out.columns:
                 parsed = pd.to_datetime(out[col].astype(str), format="%Y-%m", errors="coerce")
                 year_col = step.params.get("year_col", "sale_year")

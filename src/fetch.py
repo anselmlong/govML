@@ -47,6 +47,18 @@ class ThrottledError(RuntimeError):
     but the dataset is alive. Caller may retry later."""
 
 
+def _retry_delay(resp: requests.Response | None, fallback: float) -> float:
+    """Sleep delay honoring a Retry-After header when present, else fallback."""
+    if resp is not None:
+        try:
+            ra = resp.headers.get("Retry-After")
+            if ra and ra.isdigit():
+                return min(300, max(1, int(ra)))
+        except Exception:
+            pass
+    return fallback
+
+
 def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
     attempts = 0
     while True:
@@ -84,7 +96,7 @@ def _request_page(resource_id: str, limit: int, offset: int) -> dict[str, Any]:
             attempts += 1
             if attempts >= MAX_RETRY_ATTEMPTS:
                 raise RuntimeError(f"data.gov.sg kept returning {resp.status_code} for {resource_id} after {attempts} attempts")
-            time.sleep(5)
+            time.sleep(_retry_delay(resp, 5))
             continue
         resp.raise_for_status()
         payload = resp.json()
@@ -131,7 +143,7 @@ def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | 
             attempts += 1
             if attempts >= MAX_RETRY_ATTEMPTS:
                 raise RuntimeError(f"data.gov.sg kept returning {resp.status_code} for {resource_id} after {attempts} attempts")
-            time.sleep(5)
+            time.sleep(_retry_delay(resp, 5))
             continue
         # data.gov.sg silently rate-limits by returning HTTP 200 with an empty/
         # HTML body (content-length: 0) instead of a clean 429. The dataset is alive;
@@ -146,7 +158,7 @@ def _request_v2_page(resource_id: str, limit: int, offset: int, next_url: str | 
                     f"data.gov.sg returned non-JSON body ({resp.status_code}) for {resource_id} "
                     f"after {attempts} attempts (throttled, dataset alive)"
                 )
-            time.sleep(min(60, 10 * (2 ** attempts)))
+            time.sleep(_retry_delay(resp, min(60, 10 * (2 ** attempts))))
             continue
         resp.raise_for_status()
         if payload.get("code") not in {None, 0}:

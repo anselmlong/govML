@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { friendlyError, getRun, RunRecord, streamRun } from './api';
+import { friendlyError, getRun, reportUrl, RunRecord, streamRun } from './api';
 import Compass from './Compass';
 import PipelineStages from './PipelineStages';
 import { useCountUp } from './useCountUp';
@@ -54,7 +54,7 @@ export default function Runner() {
       <PipelineStages lines={lines} failed={failed} />
 
       {completed && run && (
-        <section className="completion-card">
+        <section className="completion-card completed">
           <div>
             <span>Best model</span>
             <b>{run.best_model ?? 'Completed'}</b>
@@ -82,7 +82,7 @@ export default function Runner() {
               </div>
             </>
           )}
-          <a href={`/reports/${run.run_id}`} target="_blank" rel="noreferrer">
+          <a href={reportUrl(run.run_id)} target="_blank" rel="noreferrer">
             Open report
           </a>
         </section>

@@ -75,6 +75,32 @@ def _client() -> tuple[Any | None, str]:
 
 
 def chat_text(prompt: str, *, system: str | None = None, max_tokens: int = 1200) -> LLMResult:
+    # OpenAI first when a key exists — same provider as the embeddings.
+    openai_key = _openai_token()
+    if openai_key:
+        try:
+            resp = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                json={
+                    "model": os.environ.get("GOVML_CHAT_MODEL", "gpt-4o-mini"),
+                    "max_tokens": max_tokens,
+                    "messages": [
+                        {"role": "system", "content": system or ""},
+                        {"role": "user", "content": prompt},
+                    ],
+                },
+                timeout=90,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            content = (payload.get("choices") or [{}])[0].get("message", {}).get("content")
+            if content and content.strip():
+                return LLMResult(content.strip(), "openai")
+        except Exception:
+            # fall through to the anthropic path rather than failing the request
+            pass
+
     client, provenance = _client()
     if client is None:
         return LLMResult(None, provenance)

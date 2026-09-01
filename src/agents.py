@@ -43,12 +43,27 @@ def _schema_summary(df: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _reject_name(name: str) -> bool:
-    lower = name.lower()
-    return lower == "id" or bool(re.search(r"(^|[_\s-])id([_\s-]|$)|index", lower))
+    lower = name.lower().strip()
+    if lower == "id" or bool(re.search(r"(^|[\s_-])id([\s_-]|$)|index", lower)):
+        return True
+    # trivial / leaky prediction targets: geographic coordinates, aggregate sums,
+    # and bare year columns are not meaningful targets to model.
+    if lower in {"latitude", "longitude", "location_latitude", "location_longitude", "lat", "lng", "lon"}:
+        return True
+    if re.fullmatch(r"(total|tot|sum|count|overall|grand_total)[\s_]?.*", lower):
+        return True
+    # bare 4-digit year (e.g. "2013", "2023", "year", "fy2013")
+    if re.fullmatch(r"(20|19)\d{2}|fy[\s_]?(20|19)\d{2}|year", lower):
+        return True
+    return False
 
 
 def heuristic_proposals(df: pd.DataFrame) -> TargetReport:
     scored: list[tuple[float, TargetProposal]] = []
+    n_rows = len(df)
+    # small datasets (annual tables, tiny aggregates) need a scaled bar:
+    # requiring >30 uniques kills every column of a 26-row table.
+    min_unique_reg = 2 if n_rows < 60 else 30
     for col in df.columns:
         s = df[col]
         missing_pct = float(s.isna().mean() * 100)
@@ -59,12 +74,17 @@ def heuristic_proposals(df: pd.DataFrame) -> TargetReport:
         score = 0.0
         task = ""
         rationale = ""
-        if pd.api.types.is_numeric_dtype(s) and unique > 30:
+        if pd.api.types.is_numeric_dtype(s) and unique >= min_unique_reg and not _reject_name(col):
             spread = float((s.max(skipna=True) or 0) - (s.min(skipna=True) or 0))
-            spread_bonus = min(5.0, spread / (abs(float(s.mean(skipna=True) or 1)) + 1e-9))
+            mean = abs(float(s.mean(skipna=True) or 1))
+            spread_bonus = min(5.0, spread / (mean + 1e-9))
             score = 3.0 + spread_bonus
             task = "regression"
-            rationale = "continuous numeric with wide spread"
+            rationale = (
+                "continuous numeric with wide spread"
+                if n_rows >= 60
+                else "numeric series in a small table — predict value from row context"
+            )
         elif unique == 2:
             score = 2.0
             task = "binary_classification"
@@ -75,8 +95,39 @@ def heuristic_proposals(df: pd.DataFrame) -> TargetReport:
             rationale = "bounded categorical outcome"
         if score > 0:
             scored.append((score, TargetProposal(col, task, min(0.9, score / 5.0), rationale)))
+    # last-resort fallback: still nothing? propose the most-informative numeric
+    # column anyway so tiny datasets produce a model instead of an error.
+    if not scored:
+        best_col, best_unique = None, -1
+        for col in df.columns:
+            s = df[col]
+            if _reject_name(col):
+                continue
+            if pd.api.types.is_numeric_dtype(s) and int(s.nunique(dropna=True)) > best_unique:
+                best_col, best_unique = col, int(s.nunique(dropna=True))
+        if best_col is not None and best_unique > 1:
+            scored.append(
+                (
+                    1.0,
+                    TargetProposal(
+                        best_col,
+                        "regression",
+                        0.3,
+                        "fallback: most-varied numeric column in this small dataset",
+                    ),
+                )
+            )
     scored.sort(key=lambda item: item[0], reverse=True)
     return TargetReport("heuristic", [p for _, p in scored[:3]], "Ranked columns by target suitability.")
+
+
+def _safe_confidence(value: Any) -> float:
+    """LLMs sometimes emit 'high'/'medium'/'low' instead of numbers."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        word = str(value or "").lower()
+        return {"high": 0.85, "medium": 0.6, "low": 0.35}.get(word, 0.5)
 
 
 def propose_targets(
@@ -122,7 +173,7 @@ def propose_targets(
                     TargetProposal(
                         target,
                         task,
-                        float(raw.get("confidence") or 0.5),
+                        _safe_confidence(raw.get("confidence")),
                         str(raw.get("rationale") or raw.get("difficulty_hint") or ""),
                     )
                 )

@@ -29,8 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src import catalog  # noqa: E402
-from src.llm import chat_text, is_available  # noqa: E402
+from src import catalog, insights, correlation  # noqa: E402
+from src.llm import chat_text, is_available, _openai_token  # noqa: E402
 from src.suitability import assess_suitability  # noqa: E402
 
 OUTPUT = ROOT / "output"
@@ -249,7 +249,44 @@ def _size_human(size: Any) -> str:
 def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
     if not q.strip():
         return []
-    return catalog.search(q, top_k=top_k)
+    results = catalog.search(q, top_k=top_k)
+    # attach stored ML insights where they exist so the UI can badge them
+    for item in results:
+        insight = insights.insights_for(item["dataset_id"])
+        if insight:
+            item["insight"] = {
+                "target": insight["target"],
+                "best_model": insight["best_model"],
+                "metrics": insight["metrics"],
+                "verdict_tone": insight["verdict_tone"],
+            }
+    return results
+
+
+@app.get("/api/insights/search")
+def api_insight_search(q: str = "", top_k: int = 5) -> list[dict[str, Any]]:
+    """Semantic search across stored ML run insights."""
+    return insights.search_insights(q, top_k=top_k)
+
+
+@app.get("/api/insights/{dataset_id}")
+def api_insight_for(dataset_id: str) -> dict[str, Any]:
+    insight = insights.insights_for(dataset_id)
+    return insight or {}
+
+
+@app.get("/api/insights/{dataset_id}/connections")
+def api_insight_connections(dataset_id: str, top_k: int = 6) -> dict[str, Any]:
+    """Derived cross-dataset connections for one dataset: embedding-similar
+    neighbours (topical links) plus any stored numeric time-series correlations."""
+    neighbours = correlation._semantic_neighbours(dataset_id, top_k)
+    stored = insights.insights_for(dataset_id)
+    corr = (stored or {}).get("correlations") or []
+    return {
+        "dataset_id": dataset_id,
+        "semantic_neighbours": neighbours,
+        "numeric_correlations": [c for c in corr if c.get("correlation_note") == "numeric-timeseries"],
+    }
 
 
 @app.get("/api/catalog/stats")
@@ -418,21 +455,35 @@ def api_ask(req: AskRequest) -> dict[str, Any]:
         if prior:
             metrics.append({"dataset_id": ds["dataset_id"], "runs": prior[:3]})
 
-    if is_available():
+    # semantic retrieval over stored ML run insights — lets answers cite what
+    # the pipeline actually learned (model quality + cross-dataset correlations)
+    insight_hits = insights.search_insights(req.query, top_k=4)
+
+    if is_available() or _openai_token():
         context = "\n".join(
             f"{i+1}. {d['name']} ({d.get('agency','')}): {d.get('description','')[:500]}" for i, d in enumerate(datasets)
         )
+        insight_context = "\n".join(
+            f"- {h['dataset_name']}: {h['insight_text']}" for h in insight_hits
+        )
         prompt = (
             "You are a senior data analyst familiar with Singapore government open data. "
-            "Answer using only retrieved datasets. Refer to datasets by full name in bold. "
+            "Answer using only retrieved datasets and prior ML findings. Refer to datasets by full name in bold. "
             "Do not refer to bracket indices. First paragraph gives the direct answer. "
-            "Second paragraph gives correlations and analytical angles. Final line starts with "
-            "Start with the selected dataset name in bold. Mention prior run metrics when available. "
-            f"Keep under roughly 220 words.\nQuestion: {req.query}\nDatasets:\n{context}\nPrior metrics: {metrics}"
+            "Second paragraph gives correlations and analytical angles, citing concrete findings from prior ML runs "
+            "(model metrics, cross-dataset correlations) where relevant. Final line starts with "
+            "Start with the selected dataset name in bold. "
+            f"Keep under roughly 220 words.\nQuestion: {req.query}\nDatasets:\n{context}\n"
+            f"Prior ML findings:\n{insight_context or 'none available'}\nPrior metrics: {metrics}"
         )
         answer = chat_text(prompt, max_tokens=900)
         if answer.value:
-            return {"answer": answer.value, "datasets": datasets, "provenance": answer.provenance}
+            return {
+                "answer": answer.value,
+                "datasets": datasets,
+                "provenance": answer.provenance,
+                "insights": insight_hits,
+            }
 
     if datasets:
         first = datasets[0]
@@ -442,7 +493,7 @@ def api_ask(req: AskRequest) -> dict[str, Any]:
         )
     else:
         text = "No matching datasets were found in the local catalog."
-    return {"answer": text, "datasets": datasets, "provenance": "fallback"}
+    return {"answer": text, "datasets": datasets, "provenance": "fallback", "insights": insight_hits}
 
 
 @app.get("/api/runs")

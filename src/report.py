@@ -52,11 +52,52 @@ def _eda_section(eda: EDAReport) -> str:
     miss_rows = "".join(f"<tr><td>{_esc(c)}</td><td>{v * 100:.1f}%</td></tr>" for c, v in miss)
     target = " ".join(f"{_esc(k)}={_esc(fmt_num(v))}" for k, v in eda.target_stats.items())
     time = " ".join(f"{_esc(k)}={_esc(v)}" for k, v in eda.time_range.items())
+
+    charts = ""
+    if eda.target_trend:
+        charts += f"<img class='chart' src='{eda.target_trend}' alt='Target over time'>"
+    if eda.target_histogram:
+        charts += f"<img class='chart' src='{eda.target_histogram}' alt='Target distribution'>"
+
+    corr_rows = "".join(
+        f"<tr><td>{_esc(c['feature'])}</td><td>{c['r']:+.3f}</td></tr>" for c in eda.feature_correlations
+    )
+    corr_block = (
+        f"<h3>Feature Correlations with Target</h3><table><thead><tr><th>Feature</th><th>Pearson r</th></tr></thead><tbody>{corr_rows}</tbody></table>"
+        if corr_rows
+        else ""
+    )
+
+    outlier_items = []
+    for col, info in list(eda.outliers.items())[:6]:
+        examples = ", ".join(str(v) for v in info.get("examples", [])[:4])
+        outlier_items.append(
+            f"<li><b>{_esc(col)}</b>: {info['count']} outliers ({info['pct']}%) — e.g. {_esc(examples)}</li>"
+        )
+    outlier_block = f"<h3>Outliers (IQR rule)</h3><ul>{''.join(outlier_items)}</ul>" if outlier_items else ""
+
+    card_notes = "".join(f"<li>{_esc(n)}</li>" for n in eda.cardinality_notes)
+    card_block = f"<h3>Column Warnings</h3><ul>{card_notes}</ul>" if card_notes else ""
+
+    sample_rows_html = ""
+    if eda.sample_rows:
+        cols = list(eda.sample_rows[0].keys())[:8]
+        head = "".join(f"<th>{_esc(c)}</th>" for c in cols)
+        body = "".join(
+            "<tr>" + "".join(f"<td>{_esc(row.get(c, ''))}</td>" for c in cols) + "</tr>" for row in eda.sample_rows[:5]
+        )
+        sample_rows_html = f"<h3>Sample Rows</h3><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+
     return (
         "<section><h2>Data Overview</h2>"
         f"<div class='kpis'><div><b>{eda.row_count:,}</b><span>rows</span></div><div><b>{eda.column_count:,}</b><span>columns</span></div>"
         f"<div><b>{_esc(target or 'n/a')}</b><span>target stats</span></div><div><b>{_esc(time or 'n/a')}</b><span>time range</span></div></div>"
-        f"<h3>Missingness</h3><table><tbody>{miss_rows}</tbody></table></section>"
+        + (f"<div class='charts'>{charts}</div>" if charts else "")
+        + corr_block
+        + outlier_block
+        + card_block
+        + sample_rows_html
+        + f"<h3>Missingness</h3><table><tbody>{miss_rows}</tbody></table></section>"
     )
 
 
@@ -137,6 +178,45 @@ def render_report(
         verdict = f"{best.name} with RMSE {fmt_num(best.metrics.get('RMSE'))} and R2 {fmt_num(best.metrics.get('R2'))}"
     else:
         verdict = f"{best.name} with accuracy {fmt_num(best.metrics.get('acc'))} and F1 {fmt_num(best.metrics.get('f1'))}"
+
+    # honest headline: the model's own verdict leads, metrics follow
+    tone_colors = {
+        "good": "#1d7a3e",
+        "okay": "#8a6d00",
+        "weak": "#b45309",
+        "exploratory": "#b45309",
+        "unusable": "#c02626",
+    }
+    tone_color = tone_colors.get(getattr(train_result, "verdict_tone", "okay"), "#8a6d00")
+    banner = ""
+    if getattr(train_result, "verdict_text", ""):
+        banner = (
+            f"<div style='border-left:6px solid {tone_color};background:{tone_color}14;"
+            f"padding:14px 18px;border-radius:6px;font-size:15.5px;line-height:1.5'>"
+            f"<b>{_esc(train_result.verdict_text)}</b></div>"
+        )
+
+    caveats: list[str] = []
+    if eda.row_count < 60:
+        caveats.append(
+            f"Only {eda.row_count} rows — every metric here is high-variance. Treat this as a demonstration of method, not a reliable model."
+        )
+    if not train_result.beats_baseline and train_result.task_type == TASK_REGRESSION:
+        caveats.append("No model beat a naive mean predictor on held-out data — the feature set has no real predictive signal.")
+    if len(train_result.numeric_features) + len(train_result.categorical_features) <= 2:
+        caveats.append("Very few features available; predictions are essentially trend extrapolation.")
+    if train_result.split_boundary == "random":
+        caveats.append(
+            "No usable time column detected — rows were split randomly. For temporal data this can leak future information into training."
+        )
+    caveat_block = (
+        f"<section><h2>Caveats — read before trusting anything below</h2><ul>"
+        + "".join(f"<li>{_esc(c)}</li>" for c in caveats)
+        + "</ul></section>"
+        if caveats
+        else ""
+    )
+
     notes = "".join(f"<li>{_esc(n)}</li>" for n in preprocess_notes)
     css = """
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#f6f4ef;color:#161616}
@@ -148,7 +228,7 @@ h2{margin:0 0 16px;font-size:24px} h3{margin-top:22px}
 .sub{max-width:920px;color:#d7dce4;font-size:18px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpis div{border:1px solid #d8d2c7;padding:14px;background:#fbfaf7;border-radius:6px}.kpis b{display:block;font-size:24px}.kpis span{color:#68635c}
 table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #e7e2d8;text-align:left;font-size:14px}
-.chart{max-width:100%;border:1px solid #e7e2d8;border-radius:6px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.chart{max-width:100%;border:1px solid #e7e2d8;border-radius:6px;margin:10px 0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .card{display:grid;gap:8px;text-decoration:none;color:#161616;border:1px solid #d8d2c7;border-radius:6px;padding:14px;background:#fbfaf7}
 .markdown{line-height:1.55;max-width:980px}
 """
@@ -157,7 +237,9 @@ table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px so
 <title>{_esc(dataset_name)} - govML report</title><style>{css}</style></head>
 <body><header><p>govML report / {_esc(resource_id)}</p><h1>{_esc(dataset_name)}</h1><p class="sub">{_esc(verdict)}</p></header>
 <main>
+{banner}
 <section><h2>Best Model</h2><div class="kpis"><div><b>{_esc(best.name)}</b><span>model</span></div><div><b>{_esc(train_result.target)}</b><span>target</span></div><div><b>{_esc(train_result.task_type)}</b><span>task</span></div><div><b>{_esc(train_result.split_boundary)}</b><span>split</span></div></div></section>
+{caveat_block}
 {_target_section(target_report)}
 {_eda_section(eda)}
 <section><h2>Preprocessing Notes</h2><ul>{notes}</ul></section>

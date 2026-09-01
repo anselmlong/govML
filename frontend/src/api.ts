@@ -143,14 +143,21 @@ export function friendlyError(err: unknown): string {
   return raw || 'Something went wrong. Please try again.';
 }
 
+// Build-time API base. Empty = same-origin (local dev via vite proxy).
+// On Vercel the static site points at the FastAPI backend on the VPS:
+// set VITE_API_BASE=https://api.govml.anselmlong.com at build time.
+const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
+
+export const reportUrl = (runId: string) => `${API_BASE}/reports/${encodeURIComponent(runId)}`;
+
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(`${API_BASE}${url}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<T>;
 }
 
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${url}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -182,7 +189,7 @@ export const getRun = (runId: string) => getJson<RunRecord>(`/api/runs/${encodeU
 export const startRun = (request: RunRequest) => postJson<{ run_id: string; reused: boolean }>('/api/runs', request);
 
 export function streamRun(runId: string, onLine: (line: string) => void, onStatus: (run: RunRecord) => void): EventSource {
-  const source = new EventSource(`/api/runs/${encodeURIComponent(runId)}/stream`);
+  const source = new EventSource(`${API_BASE}/api/runs/${encodeURIComponent(runId)}/stream`);
   source.onmessage = (event) => {
     try {
       const parsed = JSON.parse(event.data) as { event?: string; run?: RunRecord };

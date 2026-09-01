@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { select, zoom, zoomIdentity, ZoomBehavior } from 'd3';
 import CatalogBuild from './CatalogBuild';
 import Compass from './Compass';
+import MapCanvas, { MapCanvasHandle } from './MapCanvas';
 import {
   askCatalog,
   CatalogResult,
@@ -12,16 +12,12 @@ import {
   getCatalogMap,
   getCatalogStats,
   getDatasetInfo,
-  getScoreStatus,
   getSuitabilityLookup,
   MapDataset,
-  ScoreStatus,
   searchCatalog,
   startRun,
-  startScoreAll,
   Suitability
 } from './api';
-import MapDots from './MapDots';
 import RunsDock from './RunsDock';
 import { applyTheme, initialTheme, ThemeMode } from './theme';
 
@@ -57,11 +53,9 @@ function renderAnswer(text: string) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const gRef = useRef<SVGGElement | null>(null);
+  const mapRef = useRef<MapCanvasHandle | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const behaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [nodes, setNodes] = useState<MapDataset[]>([]);
   const [stats, setStats] = useState<CatalogStats | null>(null);
@@ -76,7 +70,6 @@ export default function Home() {
   const [agencyFilter, setAgencyFilter] = useState<string | null>(null);
   const [colorMode, setColorMode] = useState<ColorMode>('agency');
   const [suitabilityLookup, setSuitabilityLookup] = useState<Record<string, Suitability>>({});
-  const [scoreStatus, setScoreStatus] = useState<ScoreStatus | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme());
   const [maxRows, setMaxRows] = useState(0);
   const [noResearch, setNoResearch] = useState(true);
@@ -84,15 +77,15 @@ export default function Home() {
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [railOpen, setRailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadCatalog = useCallback(() => {
-    return Promise.allSettled([getCatalogMap(), getCatalogStats(), getSuitabilityLookup(), getScoreStatus()]).then(
-      ([mapResult, statsResult, fitResult, scoreResult]) => {
+    return Promise.allSettled([getCatalogMap(), getCatalogStats(), getSuitabilityLookup()]).then(
+      ([mapResult, statsResult, fitResult]) => {
         if (mapResult.status === 'fulfilled') setNodes(mapResult.value);
         if (statsResult.status === 'fulfilled') setStats(statsResult.value);
         if (fitResult.status === 'fulfilled') setSuitabilityLookup(fitResult.value);
-        if (scoreResult.status === 'fulfilled') setScoreStatus(scoreResult.value);
       }
     );
   }, []);
@@ -114,25 +107,14 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, [loadCatalog]);
 
-  useEffect(() => {
-    if (!svgRef.current || !gRef.current) return;
-    const svg = select<SVGSVGElement, unknown>(svgRef.current);
-    const behavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.6, 22])
-      .on('zoom', (event) => {
-        select(gRef.current).attr('transform', event.transform.toString());
-      });
-    svg.call(behavior);
-    behaviorRef.current = behavior;
-    return () => {
-      svg.on('.zoom', null);
-      behaviorRef.current = null;
-    };
-  }, [nodes.length]);
-
   const resetView = useCallback(() => {
-    if (!svgRef.current || !behaviorRef.current) return;
-    select(svgRef.current).transition().duration(360).call(behaviorRef.current.transform, zoomIdentity);
+    mapRef.current?.resetView();
+  }, []);
+
+  // fly the camera to a dot when it's chosen from the results list so users
+  // see WHERE in semantic space their pick lives
+  const flyToNode = useCallback((node: MapDataset) => {
+    mapRef.current?.flyTo(node);
   }, []);
 
   useEffect(() => {
@@ -146,13 +128,6 @@ export default function Home() {
     }, 280);
     return () => window.clearTimeout(handle);
   }, [query, mode]);
-
-  useEffect(() => {
-    const handle = window.setInterval(() => {
-      getScoreStatus().then(setScoreStatus).catch(() => undefined);
-    }, 5000);
-    return () => window.clearInterval(handle);
-  }, []);
 
   useEffect(() => {
     if (selected) closeButtonRef.current?.focus();
@@ -199,22 +174,29 @@ export default function Home() {
     return Array.from(value || 'unknown').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 7);
   }
 
-  const chooseDataset = useCallback(async (dataset: CatalogResult) => {
-    openerRef.current = document.activeElement as HTMLElement;
-    setSelected(dataset);
-    setSelectedInfo(null);
-    setExpanded(false);
-    setDetailLoading(true);
-    setError('');
-    try {
-      const info = await getDatasetInfo(dataset.dataset_id);
-      setSelectedInfo(info);
-    } catch (err) {
-      setError(friendlyError(err));
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
+  const chooseDataset = useCallback(
+    async (dataset: CatalogResult, fly = false) => {
+      openerRef.current = document.activeElement as HTMLElement;
+      setSelected(dataset);
+      setSelectedInfo(null);
+      setExpanded(false);
+      setDetailLoading(true);
+      setError('');
+      if (fly) {
+        const node = nodes.find((n) => n.dataset_id === dataset.dataset_id);
+        if (node) flyToNode(node);
+      }
+      try {
+        const info = await getDatasetInfo(dataset.dataset_id);
+        setSelectedInfo(info);
+      } catch (err) {
+        setError(friendlyError(err));
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [nodes, flyToNode]
+  );
 
   function closeDetail() {
     setSelected(null);
@@ -234,6 +216,7 @@ export default function Home() {
       const res = await askCatalog(q, 6);
       setAnswer(res.answer);
       setResults(res.datasets);
+      setAskResults(res.datasets);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -261,15 +244,6 @@ export default function Home() {
     }
   }
 
-  async function startScoring() {
-    try {
-      await startScoreAll(undefined, true);
-      setScoreStatus(await getScoreStatus());
-    } catch (err) {
-      setError(friendlyError(err));
-    }
-  }
-
   function toggleTheme() {
     const next = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(next);
@@ -278,7 +252,11 @@ export default function Home() {
 
   const searching = mode === 'search' && query.trim().length >= 2;
   const browseItems = topFit.length ? topFit : nodes.slice(0, 8);
-  const listItems = searching || mode === 'ask' ? results : browseItems;
+  // switching to Ask keeps its own results; switching back to Search must not
+  // show stale ask-results under a search box that hasn't re-fired yet.
+  const [askResults, setAskResults] = useState<CatalogResult[]>([]);
+  const listItems =
+    mode === 'ask' ? askResults : searching ? results : browseItems;
   const catalogEmpty = !loading && nodes.length === 0;
   const showSkeleton = loading && !searching && listItems.length === 0;
   const info = selectedInfo;
@@ -289,19 +267,16 @@ export default function Home() {
   return (
     <main className="home-shell">
       <section className="map-stage" aria-label="Semantic dataset map">
-        <svg ref={svgRef} viewBox="0 0 1000 700" role="img" aria-label="Semantic map of Singapore open datasets">
-          <g ref={gRef} className="map-nodes">
-            <MapDots
-              nodes={nodes}
-              colorFor={dotColorById}
-              agencyFilter={agencyFilter}
-              selectedId={selected?.dataset_id}
-              matchedIds={selectedIds}
-              hasResults={results.length > 0}
-              onSelect={chooseDataset}
-            />
-          </g>
-        </svg>
+        <MapCanvas
+          ref={mapRef}
+          nodes={nodes}
+          colorFor={dotColorById}
+          agencyFilter={agencyFilter}
+          selectedId={selected?.dataset_id}
+          matchedIds={selectedIds}
+          hasResults={results.length > 0}
+          onSelect={chooseDataset}
+        />
         {loading && (
           <div className="map-loading">
             <Compass spinning size={14} />
@@ -358,7 +333,19 @@ export default function Home() {
         </div>
       </header>
 
-      <aside className="rail" aria-label="Catalog controls">
+      <aside className={`rail ${railOpen ? 'open' : 'collapsed'}`} aria-label="Catalog controls" aria-hidden={!railOpen}>
+        <button className="rail-toggle" onClick={() => setRailOpen((v) => !v)} aria-expanded={railOpen} title={railOpen ? 'Hide panel' : 'Show panel'}>
+          {railOpen ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M5.5 2.5L10 7l-4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+          <span>{railOpen ? 'Hide' : 'Search & filters'}</span>
+        </button>
         <div className="rail-group">
         <div className="segmented">
           <span className={`indicator ${mode === 'ask' ? 'pos-1' : ''}`} aria-hidden="true" />
@@ -423,23 +410,11 @@ export default function Home() {
           <div className="row-between">
             <span>Color</span>
             <div className="mini-toggle">
-              <span className={`indicator ${colorMode === 'fit' ? 'pos-1' : ''}`} aria-hidden="true" />
-              <button className={colorMode === 'agency' ? 'selected' : ''} onClick={() => setColorMode('agency')}>
+              <span className="indicator" aria-hidden="true" />
+              <button className="selected" onClick={() => setColorMode('agency')}>
                 Agency
               </button>
-              <button className={colorMode === 'fit' ? 'selected' : ''} onClick={() => setColorMode('fit')}>
-                ML fit
-              </button>
             </div>
-          </div>
-
-          <div className="score-box">
-            <span>
-              ML fit scored {scoreStatus?.scored ?? 0}/{scoreStatus?.total ?? 0}
-            </span>
-            <button onClick={startScoring} disabled={scoreStatus?.running}>
-              {scoreStatus?.running && <Compass spinning size={14} />} {scoreStatus?.running ? 'Scoring' : 'Score all'}
-            </button>
           </div>
         </div>
 
@@ -480,7 +455,7 @@ export default function Home() {
         ) : (
           <div className="result-list">
             {listItems.map((item, index) => (
-              <button key={item.dataset_id} onClick={() => chooseDataset(item)}>
+              <button key={item.dataset_id} onClick={() => chooseDataset(item, true)}>
                 <span className="manifest-index">{String(index + 1).padStart(2, '0')}</span>
                 <span className="agency-dot" style={{ background: nodeColor(item) }} />
                 <b>{item.name}</b>

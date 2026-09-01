@@ -17,3 +17,10 @@ frontend/dist/
 *.pkl
 
 .impeccable/hook.cache.json
+.impeccable/
+.agents/
+.codex/
+.hermes/
+
+batch_ml_log.txt
+frontend/.deploy/

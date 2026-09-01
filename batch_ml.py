@@ -34,6 +34,11 @@ from src.llm import embed_texts  # noqa: E402
 from src.preprocess import find_time_column  # noqa: E402
 from src.train import TASK_REGRESSION, train_models  # noqa: E402
 from src.agents import propose_targets  # noqa: E402
+
+# If this fraction of a pass comes back throttled, the upstream is rate-limiting
+# us systemically, not a few hot ids. Skip the serial pass-2 retry loop and leave
+# the throttled sets for the next run instead of grinding for hours/day.
+THROTTLE_BREAKER_RATIO = 0.5
 from src.preprocess_planner import build_plan, execute_plan  # noqa: E402
 
 INSIGHT_SCHEMA = """
@@ -349,7 +354,19 @@ def main() -> int:
     pass2_throttled, ok, fail = run_pass(todo, args.workers, "[pass 1]")
     # A second, gentler pass over only the throttled-but-alive ids now that the
     # first burst has drained — gives data.gov.sg's silent throttle time to clear.
-    if pass2_throttled:
+    # But if the throttle is systemic (>>half the pass throttled), the whole
+    # upstream is rate-limiting us, not a few hot ids. Re-hammering every id
+    # serially would just burn hours/days fetcher-retrying a wall that won't
+    # clear. Detect that and skip pass 2: sink what landed, leave the rest for
+    # the next run (they're tracked by --since), and exit instead of spinning.
+    throttle_ratio = len(pass2_throttled) / max(1, len(todo))
+    pass2_still: list[str] = []
+    if throttle_ratio >= THROTTLE_BREAKER_RATIO:
+        print(f"\n{len(pass2_throttled)}/{len(todo)} throttled "
+              f"({throttle_ratio:.0%}) = systemic upstream throttle; "
+              "skipping pass 2, leaving them for next run.")
+        pass2_still = pass2_throttled
+    elif pass2_throttled:
         print(f"\n{len(pass2_throttled)} datasets throttled but alive. retrying gently...")
         time.sleep(5)
         pass2_still, ok2, fail2 = run_pass(
@@ -361,7 +378,7 @@ def main() -> int:
             print(f"{len(pass2_still)} still throttled after retry — leaving for next run.")
 
     print(f"runs complete: {ok} ok, {fail} failed/skipped, "
-          f"{len(pass2_throttled)} throttled. Embedding...")
+          f"{len(pass2_still)} throttled. Embedding...")
     embed_pending()
     return 0
 

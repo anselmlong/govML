@@ -99,7 +99,11 @@ def main() -> int:
     for proposal in target_report.proposals:
         print(f"  - {proposal.target} [{proposal.task_type}] conf={proposal.confidence:.2f}.")
     if not target_report.proposals:
-        raise RuntimeError("no target proposals available")
+        raise RuntimeError(
+            "no target proposals available: the dataset has no usable predictive feature "
+            "(all columns constant, empty, or dropped). Try a dataset with at least one "
+            "varying numeric or categorical column."
+        )
     chosen = target_report.proposals[0]
     print(f"chosen: {chosen.target}.")
     print(f"task type: {args.task_type or chosen.task_type}.")
@@ -142,7 +146,7 @@ def main() -> int:
     print(f"related: {len(related)} nearest from catalog.")
     correlations = []
     if train_result.task_type == TASK_REGRESSION and not args.no_correlation:
-        correlations = correlate_related(df_context, chosen.target, related)
+        correlations = correlate_related(df_context, chosen.target, args.resource_id, related)
         if correlations:
             print(f"correlation: {len(correlations)} datasets, top r={correlations[0].r:.3f} ({correlations[0].name}).")
         else:
