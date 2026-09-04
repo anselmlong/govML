@@ -75,6 +75,16 @@ Main output:
 uvicorn backend.app:app --reload --port 8000
 ```
 
+On startup, the backend self-populates: if `catalog.db` is empty it runs the
+full ingest → embed → map → score → train chain automatically (same as
+clicking "Build catalog" in the UI); if it already has data, it just resumes
+any unfinished suitability scoring or ML training from a prior run that was
+cut short (e.g. a restart). Both are resumable, so this is safe to leave
+running unattended — no manual `batch_ml.py` invocation required, though the
+CLI still works for a supervised/offline run. Progress: `GET
+/api/catalog/build-status`, `GET /api/catalog/score-status`, `GET
+/api/catalog/train-status`.
+
 ## Frontend
 
 ```bash

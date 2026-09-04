@@ -13,11 +13,14 @@ import {
   getCatalogStats,
   getDatasetInfo,
   getSuitabilityLookup,
+  getTrainStatus,
   MapDataset,
   searchCatalog,
   startRun,
-  Suitability
+  Suitability,
+  TrainStatus
 } from './api';
+import InsightCard, { hasTrainedResult } from './insight';
 import RunsDock from './RunsDock';
 import { applyTheme, initialTheme, ThemeMode } from './theme';
 
@@ -79,6 +82,7 @@ export default function Home() {
   const [expanded, setExpanded] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [trainStatus, setTrainStatus] = useState<TrainStatus | null>(null);
 
   const loadCatalog = useCallback(() => {
     return Promise.allSettled([getCatalogMap(), getCatalogStats(), getSuitabilityLookup()]).then(
@@ -106,6 +110,28 @@ export default function Home() {
       .catch((err: unknown) => setError(friendlyError(err)))
       .finally(() => setLoading(false));
   }, [loadCatalog]);
+
+  // ML training runs in the background on the server (auto-triggered after
+  // a catalog build); poll lightly so the "trained" count/badges catch up
+  // as results land, without a live-updating feed.
+  useEffect(() => {
+    let cancelled = false;
+    let handle: number;
+    const poll = () => {
+      getTrainStatus()
+        .then((status) => {
+          if (cancelled) return;
+          setTrainStatus(status);
+          if (status.running) handle = window.setTimeout(poll, 8000);
+        })
+        .catch(() => undefined);
+    };
+    poll();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, []);
 
   const resetView = useCallback(() => {
     mapRef.current?.resetView();
@@ -441,6 +467,11 @@ export default function Home() {
         <p className="section-label">
           Datasets{stats?.total ? <span className="section-count">{listItems.length} of {stats.total.toLocaleString()}</span> : null}
         </p>
+        {trainStatus?.running && (
+          <p className="training-note">
+            <Compass spinning size={11} /> Training ML models in the background — {trainStatus.trained.toLocaleString()} done so far
+          </p>
+        )}
 
         {showSkeleton ? (
           <div className="result-skeleton" aria-hidden="true">
@@ -461,6 +492,7 @@ export default function Home() {
                 <b>{item.name}</b>
                 <small>
                   {item.agency || 'Unknown'} &nbsp;•&nbsp; {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
+                  {hasTrainedResult(item) && <span className="trained-badge" title="ML result already trained">&nbsp;•&nbsp;trained</span>}
                 </small>
               </button>
             ))}
@@ -494,6 +526,7 @@ export default function Home() {
               Source
             </a>
           )}
+          {info?.insight && <InsightCard insight={info.insight} />}
           <div className="meta-grid">
             <span>Rows</span>
             <b>{info?.row_count_total?.toLocaleString() ?? 'Unknown'}</b>

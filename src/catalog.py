@@ -70,6 +70,30 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_datasets_agency ON datasets(agency)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_datasets_last_updated ON datasets(last_updated_at)")
+    # Created here (not just in batch_ml.py) so any code path that opens the
+    # catalog — including the web backend, before batch_ml.py has ever run —
+    # can query run_insights without hitting "no such table".
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS run_insights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dataset_id TEXT NOT NULL UNIQUE REFERENCES datasets(dataset_id),
+            run_id TEXT,
+            target TEXT,
+            task_type TEXT,
+            best_model TEXT,
+            metrics_json TEXT,
+            verdict_tone TEXT,
+            verdict_text TEXT,
+            insight_text TEXT NOT NULL,
+            correlations_json TEXT,
+            embedding BLOB,
+            embedding_model TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(datasets)")}
     migrations = {
         "suitability_score": "INTEGER",

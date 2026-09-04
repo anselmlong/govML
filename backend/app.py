@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import batch_ml  # noqa: E402
 from src import catalog, insights, correlation  # noqa: E402
 from src.llm import chat_text, is_available, _openai_token  # noqa: E402
 from src.suitability import assess_suitability  # noqa: E402
@@ -48,6 +49,15 @@ catalog_build_state: dict[str, Any] = {
     "completed_at": None,
     "error": None,
     "total_ingested": None,
+}
+train_lock = threading.Lock()
+train_state: dict[str, Any] = {
+    "running": False,
+    "detail": None,
+    "started_at": None,
+    "completed_at": None,
+    "error": None,
+    "last": None,
 }
 
 app = FastAPI(title="govML")
@@ -245,11 +255,7 @@ def _size_human(size: Any) -> str:
     return f"{n:.1f} {units[i]}"
 
 
-@app.get("/api/catalog/search")
-def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
-    if not q.strip():
-        return []
-    results = catalog.search(q, top_k=top_k)
+def _attach_insight_badges(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     # attach stored ML insights where they exist so the UI can badge them
     for item in results:
         insight = insights.insights_for(item["dataset_id"])
@@ -261,6 +267,14 @@ def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
                 "verdict_tone": insight["verdict_tone"],
             }
     return results
+
+
+@app.get("/api/catalog/search")
+def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
+    if not q.strip():
+        return []
+    results = catalog.search(q, top_k=top_k)
+    return _attach_insight_badges(results)
 
 
 @app.get("/api/insights/search")
@@ -301,7 +315,17 @@ def api_catalog_sample(limit: int = 250) -> list[dict[str, Any]]:
 
 @app.get("/api/catalog/map")
 def api_catalog_map(force: bool = False) -> list[dict[str, Any]]:
-    return catalog.compute_map_coords(force=force)
+    data = catalog.compute_map_coords(force=force)
+    # map_coords.json is a cached snapshot of the (expensive) UMAP layout,
+    # only recomputed when the catalog build forces it — so which datasets
+    # have a trained ML result changes far more often than that cache.
+    # Overlay it fresh on every request instead of baking it into the cache.
+    conn = catalog.connect(catalog.DB_PATH)
+    trained = {r["dataset_id"] for r in conn.execute("SELECT dataset_id FROM run_insights")}
+    conn.close()
+    for item in data:
+        item["has_insight"] = item["dataset_id"] in trained
+    return data
 
 
 @app.get("/api/catalog/suitability")
@@ -334,7 +358,43 @@ def api_score_all(background: BackgroundTasks, limit: int | None = None, resume:
     return {"started": True}
 
 
-def _catalog_build_job() -> None:
+@app.get("/api/catalog/train-status")
+def api_train_status() -> dict[str, Any]:
+    conn = catalog.connect(catalog.DB_PATH)
+    trained = conn.execute("SELECT COUNT(*) n FROM run_insights").fetchone()["n"]
+    conn.close()
+    status = dict(train_state)
+    status["trained"] = int(trained)
+    return status
+
+
+def _train_all_job(limit: int | None, tones: list[str]) -> None:
+    with train_lock:
+        train_state.update({"running": True, "started_at": _utc_now(), "completed_at": None, "error": None, "detail": None})
+    try:
+        def on_progress(line: str) -> None:
+            train_state["detail"] = line
+
+        # Modest worker count: this runs inside the same process as the live
+        # API, so it shouldn't fight the request-handling threads for CPU.
+        result = batch_ml.run_batch(tones=tones, limit=limit, workers=2, on_progress=on_progress)
+        train_state["last"] = result
+    except Exception as exc:
+        train_state["error"] = str(exc)
+    finally:
+        train_state.update({"running": False, "completed_at": _utc_now()})
+
+
+@app.post("/api/catalog/train-all", status_code=202)
+def api_train_all(background: BackgroundTasks, limit: int | None = None, tones: str = "good,okay,marginal") -> dict[str, Any]:
+    if train_state.get("running"):
+        raise HTTPException(409, "ML training is already in progress")
+    tone_list = [t.strip() for t in tones.split(",") if t.strip()]
+    background.add_task(_train_all_job, limit, tone_list)
+    return {"started": True}
+
+
+def _catalog_build_job(chain: bool = True) -> None:
     with catalog_build_lock:
         catalog_build_state.update(
             {
@@ -364,8 +424,20 @@ def _catalog_build_job() -> None:
         catalog_build_state.update({"phase": "done", "detail": None})
     except Exception as exc:
         catalog_build_state["error"] = str(exc)
+        return
     finally:
         catalog_build_state.update({"running": False, "completed_at": _utc_now()})
+
+    # A freshly built catalog has dots but no suitability scores or trained
+    # ML results yet. Chain straight into scoring, then training, so a site
+    # that just built its catalog (via the UI button or on empty-catalog
+    # startup) ends up fully populated without anyone needing to SSH in and
+    # run batch_ml.py by hand. Both steps are resumable (they skip datasets
+    # already done), so re-triggering a build later is harmless.
+    if chain and not score_state.get("running"):
+        _score_all_job(limit=None, resume=True, rescore_below=None)
+    if chain and not train_state.get("running"):
+        _train_all_job(limit=None, tones=["good", "okay", "marginal"])
 
 
 @app.get("/api/catalog/build-status")
@@ -379,6 +451,36 @@ def api_catalog_build(background: BackgroundTasks) -> dict[str, Any]:
         raise HTTPException(409, "catalog build already in progress")
     background.add_task(_catalog_build_job)
     return {"started": True}
+
+
+@app.on_event("startup")
+def _auto_populate_on_startup() -> None:
+    """Self-heal an empty or half-finished catalog without waiting on a
+    visitor to click "Build catalog" in the UI. Runs off the request cycle
+    so it never delays the server coming up.
+
+    - Empty catalog.db (fresh deploy, wiped disk): run the full
+      ingest -> embed -> map -> score -> train chain, same as the UI button.
+    - Non-empty catalog: only resume scoring/training (both skip datasets
+      already done), in case a previous run was cut short by a restart.
+      Deliberately skips re-ingesting/re-embedding/re-mapping here so a
+      crash-looping process doesn't hammer data.gov.sg's listing API.
+    """
+
+    def worker() -> None:
+        try:
+            if catalog.stats().get("total", 0) == 0:
+                if not catalog_build_state.get("running"):
+                    _catalog_build_job()
+                return
+            if not score_state.get("running"):
+                _score_all_job(limit=None, resume=True, rescore_below=None)
+            if not train_state.get("running"):
+                _train_all_job(limit=None, tones=["good", "okay", "marginal"])
+        except Exception:
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 @app.get("/api/datasets/{resource_id}/info")
@@ -437,6 +539,7 @@ def api_dataset_info(resource_id: str, sample_rows: int = 500) -> dict[str, Any]
         "has_datastore": has_datastore,
         "errors": errors,
         "suitability": suitability,
+        "insight": insights.insights_for(resource_id),
     }
 
 
@@ -447,7 +550,7 @@ def api_dataset_preview(resource_id: str, sample_rows: int = 500) -> dict[str, A
 
 @app.post("/api/ask")
 def api_ask(req: AskRequest) -> dict[str, Any]:
-    datasets = catalog.search(req.query, top_k=req.top_k)
+    datasets = _attach_insight_badges(catalog.search(req.query, top_k=req.top_k))
     runs = [r for r in _load_runs() if r.get("status") == "completed"]
     metrics = []
     for ds in datasets:

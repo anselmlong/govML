@@ -23,6 +23,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -41,32 +42,10 @@ from src.agents import propose_targets  # noqa: E402
 THROTTLE_BREAKER_RATIO = 0.5
 from src.preprocess_planner import build_plan, execute_plan  # noqa: E402
 
-INSIGHT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS run_insights (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dataset_id TEXT NOT NULL UNIQUE REFERENCES datasets(dataset_id),
-    run_id TEXT,
-    target TEXT,
-    task_type TEXT,
-    best_model TEXT,
-    metrics_json TEXT,
-    verdict_tone TEXT,
-    verdict_text TEXT,
-    insight_text TEXT NOT NULL,
-    correlations_json TEXT,
-    embedding BLOB,
-    embedding_model TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-"""
-
-
 def ensure_schema(db_path: Path = DB_PATH) -> None:
-    conn = connect(db_path)
-    conn.executescript(INSIGHT_SCHEMA)
-    conn.commit()
-    conn.close()
+    # run_insights is created by src.catalog.ensure_schema() on every
+    # connect(); this wrapper is kept for existing callers/CLI usage.
+    connect(db_path).close()
 
 
 def eligible_ids(tones: list[str], db_path: Path = DB_PATH) -> list[str]:
@@ -267,6 +246,133 @@ def embed_pending(batch_size: int = 64, db_path: Path = DB_PATH) -> int:
     return done
 
 
+def run_batch(
+    tones: list[str],
+    limit: int | None = None,
+    workers: int = 4,
+    retrain_existing: bool = False,
+    since: str | None = None,
+    no_correlation: bool = False,
+    on_progress: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Core batch-training loop, shared by the CLI and the web backend's
+    background training job. Returns a summary dict."""
+    ensure_schema()
+
+    def report(msg: str) -> None:
+        print(msg)
+        if on_progress:
+            on_progress(msg)
+
+    ids = eligible_ids(tones)
+    conn = connect(DB_PATH)
+    already = {r["dataset_id"] for r in conn.execute("SELECT dataset_id FROM run_insights").fetchall()}
+    conn.close()
+    if retrain_existing:
+        todo = list(ids)
+    else:
+        todo = [i for i in ids if i not in already]
+    # resume support: in retrain mode, skip datasets already re-saved since a
+    # given cutoff so OOM restarts gain ground instead of redoing from the top.
+    # datasets never saved (not in `already`) must always run.
+    if retrain_existing and since:
+        todo = [i for i in todo if i not in already or not _saved_since(i, since)]
+    if limit:
+        todo = todo[:limit]
+    report(f"{len(ids)} eligible, {len(already)} done, {len(todo)} to run (retrain_existing={retrain_existing})")
+
+    names: dict[str, str] = {}
+    conn = connect(DB_PATH)
+    for r in conn.execute("SELECT dataset_id, name FROM datasets"):
+        names[r["dataset_id"]] = r["name"]
+    conn.close()
+
+    t0 = time.time()
+    run_done = 0  # total futures handled across passes
+
+    def run_pass(ds_ids: list[str], pass_workers: int, note: str) -> tuple[list[str], int, int]:
+        """Run a pass over ds_ids. Returns (throttled_ids_to_retry, ok_count, fail_count).
+
+        ThrottledError = dataset alive but upstream transiently throttling us — retry later.
+        GoneError = dataset truly retired — terminal. Clean skips (empty df) are terminal."""
+        nonlocal run_done
+        retry_ids: list[str] = []
+        w_ok = w_fail = 0
+        with ProcessPoolExecutor(max_workers=pass_workers) as pool:
+            futures = {
+                pool.submit(run_one, d, names.get(d, d), 10000, no_correlation): d
+                for d in ds_ids
+            }
+            for fut in as_completed(futures):
+                # gentle pacing: data.gov.sg rate-limits bursts aggressively
+                time.sleep(0.6)
+                d = futures[fut]
+                run_done += 1
+                try:
+                    result = fut.result()
+                    if result:
+                        save_insight(d, result)
+                        w_ok += 1
+                        report(f"[{run_done}/{len(todo)}] OK  {d} ({time.time()-t0:.0f}s) {note}")
+                    else:
+                        w_fail += 1
+                        report(f"[{run_done}/{len(todo)}] SKIP {d}: empty/too few rows {note}")
+                except GoneError as exc:
+                    w_fail += 1
+                    report(f"[{run_done}/{len(todo)}] GONE {d}: {str(exc)[:90]} {note}")
+                except ThrottledError:
+                    # alive but throttled — retry gently; don't drop permanently
+                    retry_ids.append(d)
+                    report(f"[{run_done}/{len(todo)}] RETRY {d}: throttled, alive {note}")
+                except Exception as exc:
+                    w_fail += 1
+                    report(f"[{run_done}/{len(todo)}] FAIL {d}: {str(exc)[:120]} {note}")
+        return retry_ids, w_ok, w_fail
+
+    if not todo:
+        report("nothing to do")
+        return {"eligible": len(ids), "already_done": len(already), "requested": 0, "ok": 0, "fail": 0, "throttled": 0}
+
+    pass2_throttled, ok, fail = run_pass(todo, workers, "[pass 1]")
+    # A second, gentler pass over only the throttled-but-alive ids now that the
+    # first burst has drained — gives data.gov.sg's silent throttle time to clear.
+    # But if the throttle is systemic (>>half the pass throttled), the whole
+    # upstream is rate-limiting us, not a few hot ids. Re-hammering every id
+    # serially would just burn hours/days fetcher-retrying a wall that won't
+    # clear. Detect that and skip pass 2: sink what landed, leave the rest for
+    # the next run (they're tracked by --since), and exit instead of spinning.
+    throttle_ratio = len(pass2_throttled) / max(1, len(todo))
+    pass2_still: list[str] = []
+    if throttle_ratio >= THROTTLE_BREAKER_RATIO:
+        report(f"\n{len(pass2_throttled)}/{len(todo)} throttled "
+               f"({throttle_ratio:.0%}) = systemic upstream throttle; "
+               "skipping pass 2, leaving them for next run.")
+        pass2_still = pass2_throttled
+    elif pass2_throttled:
+        report(f"\n{len(pass2_throttled)} datasets throttled but alive. retrying gently...")
+        time.sleep(5)
+        pass2_still, ok2, fail2 = run_pass(
+            pass2_throttled, max(1, workers // 2), "[pass 2 retry]"
+        )
+        ok += ok2
+        fail += fail2
+        if pass2_still:
+            report(f"{len(pass2_still)} still throttled after retry — leaving for next run.")
+
+    report(f"runs complete: {ok} ok, {fail} failed/skipped, "
+           f"{len(pass2_still)} throttled. Embedding...")
+    embedded = embed_pending()
+    return {
+        "eligible": len(ids),
+        "already_done": len(already),
+        "requested": len(todo),
+        "ok": ok,
+        "fail": fail,
+        "throttled": len(pass2_still),
+        "embedded": embedded,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tones", default="good,okay,marginal")
@@ -286,100 +392,14 @@ def main() -> int:
         return 0
 
     tones = [t.strip() for t in args.tones.split(",")]
-    ids = eligible_ids(tones)
-    conn = connect(DB_PATH)
-    already = {r["dataset_id"] for r in conn.execute("SELECT dataset_id FROM run_insights").fetchall()}
-    conn.close()
-    if args.retrain_existing:
-        todo = list(ids)
-    else:
-        todo = [i for i in ids if i not in already]
-    # resume support: in retrain mode, skip datasets already re-saved since a
-    # given cutoff so OOM restarts gain ground instead of redoing from the top.
-    # datasets never saved (not in `already`) must always run.
-    if args.retrain_existing and args.since:
-        todo = [i for i in todo if i not in already or not _saved_since(i, args.since)]
-    if args.limit:
-        todo = todo[: args.limit]
-    print(f"{len(ids)} eligible, {len(already)} done, {len(todo)} to run (retrain_existing={args.retrain_existing})")
-
-    names: dict[str, str] = {}
-    conn = connect(DB_PATH)
-    for r in conn.execute("SELECT dataset_id, name FROM datasets"):
-        names[r["dataset_id"]] = r["name"]
-    conn.close()
-
-    t0 = time.time()
-    run_done = 0  # total futures handled across passes
-
-    def run_pass(ds_ids: list[str], workers: int, note: str) -> tuple[list[str], int, int]:
-        """Run a pass over ds_ids. Returns (throttled_ids_to_retry, ok_count, fail_count).
-
-        ThrottledError = dataset alive but upstream transiently throttling us — retry later.
-        GoneError = dataset truly retired — terminal. Clean skips (empty df) are terminal."""
-        nonlocal run_done
-        retry_ids: list[str] = []
-        w_ok = w_fail = 0
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {
-                pool.submit(run_one, d, names.get(d, d), 10000, args.no_correlation): d
-                for d in ds_ids
-            }
-            for fut in as_completed(futures):
-                # gentle pacing: data.gov.sg rate-limits bursts aggressively
-                time.sleep(0.6)
-                d = futures[fut]
-                run_done += 1
-                try:
-                    result = fut.result()
-                    if result:
-                        save_insight(d, result)
-                        w_ok += 1
-                        print(f"[{run_done}/{len(todo)}] OK  {d} ({time.time()-t0:.0f}s) {note}")
-                    else:
-                        w_fail += 1
-                        print(f"[{run_done}/{len(todo)}] SKIP {d}: empty/too few rows {note}")
-                except GoneError as exc:
-                    w_fail += 1
-                    print(f"[{run_done}/{len(todo)}] GONE {d}: {str(exc)[:90]} {note}")
-                except ThrottledError as exc:
-                    # alive but throttled — retry gently; don't drop permanently
-                    retry_ids.append(d)
-                    print(f"[{run_done}/{len(todo)}] RETRY {d}: throttled, alive {note}")
-                except Exception as exc:
-                    w_fail += 1
-                    print(f"[{run_done}/{len(todo)}] FAIL {d}: {str(exc)[:120]} {note}")
-        return retry_ids, w_ok, w_fail
-
-    pass2_throttled, ok, fail = run_pass(todo, args.workers, "[pass 1]")
-    # A second, gentler pass over only the throttled-but-alive ids now that the
-    # first burst has drained — gives data.gov.sg's silent throttle time to clear.
-    # But if the throttle is systemic (>>half the pass throttled), the whole
-    # upstream is rate-limiting us, not a few hot ids. Re-hammering every id
-    # serially would just burn hours/days fetcher-retrying a wall that won't
-    # clear. Detect that and skip pass 2: sink what landed, leave the rest for
-    # the next run (they're tracked by --since), and exit instead of spinning.
-    throttle_ratio = len(pass2_throttled) / max(1, len(todo))
-    pass2_still: list[str] = []
-    if throttle_ratio >= THROTTLE_BREAKER_RATIO:
-        print(f"\n{len(pass2_throttled)}/{len(todo)} throttled "
-              f"({throttle_ratio:.0%}) = systemic upstream throttle; "
-              "skipping pass 2, leaving them for next run.")
-        pass2_still = pass2_throttled
-    elif pass2_throttled:
-        print(f"\n{len(pass2_throttled)} datasets throttled but alive. retrying gently...")
-        time.sleep(5)
-        pass2_still, ok2, fail2 = run_pass(
-            pass2_throttled, max(1, args.workers // 2), "[pass 2 retry]"
-        )
-        ok += ok2
-        fail += fail2
-        if pass2_still:
-            print(f"{len(pass2_still)} still throttled after retry — leaving for next run.")
-
-    print(f"runs complete: {ok} ok, {fail} failed/skipped, "
-          f"{len(pass2_still)} throttled. Embedding...")
-    embed_pending()
+    run_batch(
+        tones=tones,
+        limit=args.limit,
+        workers=args.workers,
+        retrain_existing=args.retrain_existing,
+        since=args.since,
+        no_correlation=args.no_correlation,
+    )
     return 0
 
 

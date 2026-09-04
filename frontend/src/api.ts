@@ -1,3 +1,35 @@
+export interface InsightCorrelation {
+  dataset_id: string;
+  name: string;
+  r: number;
+  overlap_months: number;
+  similarity: number | null;
+  proxy_column?: string;
+  correlation_note?: string;
+}
+
+export interface Insight {
+  dataset_id: string;
+  dataset_name: string;
+  agency: string;
+  run_id: string | null;
+  target: string;
+  task_type: string;
+  best_model: string;
+  metrics: Record<string, number>;
+  verdict_tone: string;
+  verdict_text: string;
+  insight_text: string;
+  correlations: InsightCorrelation[];
+}
+
+export interface InsightBadge {
+  target: string;
+  best_model: string;
+  metrics: Record<string, number>;
+  verdict_tone: string;
+}
+
 export interface CatalogResult {
   dataset_id: string;
   name: string;
@@ -11,6 +43,7 @@ export interface CatalogResult {
   suitability_score?: number | null;
   suitability_tone?: string | null;
   score?: number;
+  insight?: InsightBadge;
 }
 
 export interface CatalogStats {
@@ -24,6 +57,7 @@ export interface SampleDataset extends CatalogResult {}
 export interface MapDataset extends CatalogResult {
   x: number;
   y: number;
+  has_insight?: boolean;
 }
 
 export interface RunRecord {
@@ -99,6 +133,7 @@ export interface DatasetInfo {
   has_datastore: boolean;
   errors: string[];
   suitability: Suitability;
+  insight: Insight | null;
 }
 
 export interface AskResult {
@@ -124,6 +159,16 @@ export interface CatalogBuildStatus {
   completed_at: string | null;
   error: string | null;
   total_ingested: number | null;
+}
+
+export interface TrainStatus {
+  running: boolean;
+  detail: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  last: unknown;
+  trained: number;
 }
 
 export function friendlyError(err: unknown): string {
@@ -184,6 +229,8 @@ export const startScoreAll = (limit?: number, resume = true, rescoreBelow?: numb
 export const askCatalog = (query: string, topK = 5) => postJson<AskResult>('/api/ask', { query, top_k: topK });
 export const getCatalogBuildStatus = () => getJson<CatalogBuildStatus>('/api/catalog/build-status');
 export const startCatalogBuild = () => postJson<{ started: boolean }>('/api/catalog/build');
+export const getTrainStatus = () => getJson<TrainStatus>('/api/catalog/train-status');
+export const getDatasetInsight = (resourceId: string) => getJson<Insight | Record<string, never>>(`/api/insights/${encodeURIComponent(resourceId)}`);
 export const getRuns = () => getJson<RunRecord[]>('/api/runs');
 export const getRun = (runId: string) => getJson<RunRecord>(`/api/runs/${encodeURIComponent(runId)}`);
 export const startRun = (request: RunRequest) => postJson<{ run_id: string; reused: boolean }>('/api/runs', request);
