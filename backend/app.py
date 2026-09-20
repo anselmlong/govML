@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -18,12 +19,12 @@ from typing import Any
 
 import pandas as pd
 import requests
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,6 +38,7 @@ OUTPUT = ROOT / "output"
 OUTPUT.mkdir(exist_ok=True)
 RUNS_FILE = ROOT / "backend" / "runs.json"
 active_procs: dict[str, subprocess.Popen] = {}
+run_start_lock = threading.Lock()
 score_lock = threading.Lock()
 score_state: dict[str, Any] = {"running": False, "started_at": None, "completed_at": None, "last": None}
 catalog_build_lock = threading.Lock()
@@ -53,22 +55,36 @@ catalog_build_state: dict[str, Any] = {
 app = FastAPI(title="govML")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in os.getenv("GOVML_CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
+@app.middleware("http")
+async def require_operator_token(request: Request, call_next):
+    """Keep the public gallery read-only; costly operations require an operator."""
+    forced_map = request.url.path == "/api/catalog/map" and request.query_params.get("force", "").lower() in {"true", "1", "yes", "on"}
+    if forced_map or (request.url.path.startswith("/api/") and request.method not in {"GET", "HEAD", "OPTIONS"}):
+        token = os.getenv("GOVML_OPERATOR_TOKEN", "")
+        if not token:
+            return JSONResponse({"detail": "Operator API is disabled; configure GOVML_OPERATOR_TOKEN"}, status_code=503)
+        supplied = request.headers.get("Authorization", "")
+        if not secrets.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
+            return JSONResponse({"detail": "Operator authentication required"}, status_code=401)
+    return await call_next(request)
+
+
 class AskRequest(BaseModel):
-    query: str
-    top_k: int = 5
+    query: str = Field(min_length=1, max_length=4000)
+    top_k: int = Field(default=5, ge=1, le=20)
 
 
 class RunRequest(BaseModel):
-    resource_id: str
-    name: str | None = None
-    max_rows: int = 30_000
+    resource_id: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$")
+    name: str | None = Field(default=None, max_length=200)
+    max_rows: int = Field(default=30_000, ge=1, le=100_000)
     no_research: bool = True
     no_correlation: bool = False
     force: bool = False
@@ -511,6 +527,13 @@ def api_run(run_id: str) -> dict[str, Any]:
 
 @app.post("/api/runs", status_code=202)
 def api_start_run(req: RunRequest) -> dict[str, Any]:
+    with run_start_lock:
+        if any(proc.poll() is None for proc in active_procs.values()):
+            raise HTTPException(429, "A pipeline is already running; retry after it completes")
+        return _start_run(req)
+
+
+def _start_run(req: RunRequest) -> dict[str, Any]:
     runs = _load_runs()
     if not req.force:
         for run in runs:
@@ -614,4 +637,3 @@ def api_report(run_id: str) -> FileResponse:
 dist = ROOT / "frontend" / "dist"
 if dist.exists():
     app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
-

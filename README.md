@@ -1,5 +1,7 @@
 # govML
 
+Before exposing the gallery, read [Operator API and public gallery](docs-security.md). Costly API operations now require a backend operator token; the public gallery remains readable without one.
+
 govML is an on-demand machine-learning pipeline and gallery UI for Singapore
 data.gov.sg datasets.
 
@@ -90,4 +92,3 @@ Vite proxies `/api` and `/reports` to the backend on port 8000.
 ```bash
 pytest
 ```
-
