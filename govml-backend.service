@@ -7,6 +7,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/govml
 Environment=PATH=/home/ubuntu/govml/.venv/bin:/usr/bin:/bin
+Environment=GOVML_CORS_ORIGINS=https://govml.anselmlong.com,https://govml.vercel.app
 ExecStart=/home/ubuntu/govml/.venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8126
 Restart=on-failure
 RestartSec=3
