@@ -156,6 +156,7 @@ def _parse_done(line: str) -> dict[str, Any]:
 
 
 def _drain_process(run_id: str, proc: subprocess.Popen, log_path: Path) -> None:
+    started = time.time()
     final_fields: dict[str, Any] = {}
     with log_path.open("w", encoding="utf-8", buffering=1) as log:
         assert proc.stdout is not None
@@ -173,7 +174,10 @@ def _drain_process(run_id: str, proc: subprocess.Popen, log_path: Path) -> None:
 
     report_path = OUTPUT / f"report_{run_id}.html"
     latest = OUTPUT / "report.html"
-    if latest.exists():
+    # report.html is shared by every run, so after a failed run it still holds
+    # the previous (possibly different dataset's) report - only claim it when
+    # this run succeeded and actually rewrote it.
+    if code == 0 and latest.exists() and latest.stat().st_mtime >= started:
         shutil.copyfile(latest, report_path)
 
     status = "completed" if code == 0 else "failed"
