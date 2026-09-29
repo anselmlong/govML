@@ -55,3 +55,19 @@ def test_concurrent_run_rejected(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         api_start_run(RunRequest(resource_id="d_example"))
     assert exc.value.status_code == 429
+
+
+@pytest.mark.parametrize("path", [
+    "/api/catalog/search?q=rain&top_k=100000",
+    "/api/catalog/sample?limit=100000",
+    "/api/catalog/sample?limit=0",
+    "/api/insights/search?q=rain&top_k=100000",
+    "/api/insights/d_example/connections?top_k=100000",
+    "/api/datasets/d_example/info?sample_rows=100000",
+    "/api/datasets/d_example/preview?sample_rows=-1",
+])
+def test_public_reads_are_bounded(path):
+    async def get():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            return await client.get(path)
+    assert asyncio.run(get()).status_code == 422

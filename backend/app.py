@@ -19,7 +19,7 @@ from typing import Any
 
 import pandas as pd
 import requests
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -37,6 +37,8 @@ from src.suitability import assess_suitability  # noqa: E402
 OUTPUT = ROOT / "output"
 OUTPUT.mkdir(exist_ok=True)
 RUNS_FILE = ROOT / "backend" / "runs.json"
+# Public read endpoints forward these sizes to SQLite and data.gov.sg, so cap them.
+MAX_SAMPLE_ROWS = 1000
 active_procs: dict[str, subprocess.Popen] = {}
 run_start_lock = threading.Lock()
 score_lock = threading.Lock()
@@ -266,7 +268,7 @@ def _size_human(size: Any) -> str:
 
 
 @app.get("/api/catalog/search")
-def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
+def api_catalog_search(q: str = "", top_k: int = Query(10, ge=1, le=50)) -> list[dict[str, Any]]:
     if not q.strip():
         return []
     results = catalog.search(q, top_k=top_k)
@@ -284,7 +286,7 @@ def api_catalog_search(q: str = "", top_k: int = 10) -> list[dict[str, Any]]:
 
 
 @app.get("/api/insights/search")
-def api_insight_search(q: str = "", top_k: int = 5) -> list[dict[str, Any]]:
+def api_insight_search(q: str = "", top_k: int = Query(5, ge=1, le=20)) -> list[dict[str, Any]]:
     """Semantic search across stored ML run insights."""
     return insights.search_insights(q, top_k=top_k)
 
@@ -296,7 +298,7 @@ def api_insight_for(dataset_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/insights/{dataset_id}/connections")
-def api_insight_connections(dataset_id: str, top_k: int = 6) -> dict[str, Any]:
+def api_insight_connections(dataset_id: str, top_k: int = Query(6, ge=1, le=20)) -> dict[str, Any]:
     """Derived cross-dataset connections for one dataset: embedding-similar
     neighbours (topical links) plus any stored numeric time-series correlations."""
     neighbours = correlation._semantic_neighbours(dataset_id, top_k)
@@ -315,7 +317,7 @@ def api_catalog_stats() -> dict[str, Any]:
 
 
 @app.get("/api/catalog/sample")
-def api_catalog_sample(limit: int = 250) -> list[dict[str, Any]]:
+def api_catalog_sample(limit: int = Query(250, ge=1, le=MAX_SAMPLE_ROWS)) -> list[dict[str, Any]]:
     return catalog.sample(limit)
 
 
@@ -402,7 +404,7 @@ def api_catalog_build(background: BackgroundTasks) -> dict[str, Any]:
 
 
 @app.get("/api/datasets/{resource_id}/info")
-def api_dataset_info(resource_id: str, sample_rows: int = 500) -> dict[str, Any]:
+def api_dataset_info(resource_id: str, sample_rows: int = Query(500, ge=1, le=MAX_SAMPLE_ROWS)) -> dict[str, Any]:
     meta = catalog.metadata(resource_id) if resource_id.startswith("d_") else None
     local = catalog.get_dataset(resource_id)
     records, total, fields, errors = _ckan_preview(resource_id, sample_rows)
@@ -461,7 +463,7 @@ def api_dataset_info(resource_id: str, sample_rows: int = 500) -> dict[str, Any]
 
 
 @app.get("/api/datasets/{resource_id}/preview")
-def api_dataset_preview(resource_id: str, sample_rows: int = 500) -> dict[str, Any]:
+def api_dataset_preview(resource_id: str, sample_rows: int = Query(500, ge=1, le=MAX_SAMPLE_ROWS)) -> dict[str, Any]:
     return api_dataset_info(resource_id, sample_rows)
 
 
