@@ -270,6 +270,11 @@ export default function Home() {
   const showSkeleton = loading && !searching && listItems.length === 0;
   const info = selectedInfo;
   const fit = selected ? suitabilityLookup[selected.dataset_id] ?? info?.suitability : null;
+  // Where the picked dataset lies on the chart, as a bearing from its centre.
+  const selectedNode = selected ? nodes.find((n) => n.dataset_id === selected.dataset_id) : undefined;
+  const bearing = selectedNode
+    ? (Math.atan2(selectedNode.x - 0.5, 0.5 - selectedNode.y) * 180) / Math.PI
+    : undefined;
   const description = info?.description || selected?.description || '';
   const displayedDescription = expanded || description.length < 360 ? description : `${description.slice(0, 360)}...`;
 
@@ -292,8 +297,13 @@ export default function Home() {
             Charting{stats?.total ? ` ${stats.total.toLocaleString()} datasets` : ''}&hellip;
           </div>
         )}
-        <button className="map-compass" onClick={resetView} aria-label="Reset map view" title="Reset view">
-          <Compass size={38} signature />
+        <button
+          className="map-compass"
+          onClick={resetView}
+          aria-label="Reset map view"
+          title={selectedNode ? 'Reset view · the needle points toward your selected dataset' : 'Reset view'}
+        >
+          <Compass size={38} signature bearing={bearing} />
         </button>
         <div className="map-hint">Scroll to zoom &middot; drag to pan &middot; click a marker</div>
       </section>

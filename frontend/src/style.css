@@ -677,6 +677,11 @@ button:disabled:hover {
   opacity: 0.4;
 }
 
+.compass-glyph .compass-needle {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
 .compass-glyph.is-signature .compass-needle-fwd {
   fill: var(--bearing);
 }
@@ -1657,6 +1662,12 @@ th {
   .map-dot:hover {
     animation: none;
     transform: scale(1.6);
+  }
+
+  /* A picked dataset swings the chart's needle toward it, fast at first and
+     easing onto its heading. */
+  .compass-glyph.is-signature .compass-needle {
+    transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .map-compass:hover .compass-glyph {
