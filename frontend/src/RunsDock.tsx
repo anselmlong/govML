@@ -21,7 +21,7 @@ export default function RunsDock() {
 
   return (
     <div className="runs-dock">
-      <button onClick={() => setOpen((value) => !value)}>
+      <button onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         Runs <b>{runs.length}</b> {running ? <span>{running} running</span> : null}
       </button>
       {open && (

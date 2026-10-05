@@ -14,13 +14,17 @@
   --brass: #a5824a;
   --mist: #7c8f93;
   --good: #3f7d52;
+  /* text-safe variants of the chart inks (≥4.5:1 on paper and surface) */
+  --brass-ink: #7a5a26;
+  --good-ink: #2f6340;
+  --on-accent: #ffffff;
 
   --bg: var(--paper);
   --panel: rgba(251, 246, 233, 0.92);
   --panel-solid: #fbf6e9;
   --surface: #ece1c6;
   --text: var(--ink);
-  --muted: #5c6a6c;
+  --muted: #4f5c5e;
   --line: rgba(22, 38, 45, 0.16);
   --map: #f6efdd;
   --map-grid: rgba(47, 110, 127, 0.14);
@@ -51,6 +55,9 @@
   --good: #5ea377;
   --mist: #93a3a3;
   --bearing: #d97a4c;
+  --brass-ink: #c7a565;
+  --good-ink: #5ea377;
+  --on-accent: #0f1c21;
 }
 
 * {
@@ -95,7 +102,14 @@ a {
 
 ::selection {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
+}
+
+input[type='checkbox'] {
+  accent-color: var(--bearing);
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 ::-webkit-scrollbar {
@@ -416,7 +430,7 @@ code {
   top: 96px;
   left: 24px;
   width: min(390px, calc(100vw - 48px));
-  max-height: calc(100vh - 128px);
+  max-height: calc(100vh - 200px);
   overflow: auto;
   display: grid;
   gap: 16px;
@@ -488,7 +502,7 @@ code {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 400;
-  color: var(--mist);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -606,7 +620,7 @@ code {
 .catalog-build button:hover {
   background: var(--bearing);
   border-color: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 button:disabled {
@@ -702,7 +716,7 @@ button:disabled:hover {
 .chips .selected {
   border-color: var(--bearing);
   background: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .answer,
@@ -776,7 +790,7 @@ button:disabled:hover {
   margin-top: 3px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--mist);
+  color: var(--muted);
 }
 
 .result-list b {
@@ -837,7 +851,7 @@ button:disabled:hover {
 }
 
 .build-error {
-  color: var(--bearing);
+  color: var(--accent-strong);
 }
 
 .catalog-build-stages {
@@ -908,7 +922,7 @@ button:disabled:hover {
   top: 96px;
   right: 24px;
   width: min(520px, calc(100vw - 48px));
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 184px);
   overflow: auto;
   display: grid;
   gap: 15px;
@@ -1090,14 +1104,14 @@ th {
   font-weight: 700;
   background: var(--bearing);
   border-color: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
   justify-content: center;
 }
 
 .launch-button:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .toast {
@@ -1109,7 +1123,7 @@ th {
   border: 1px solid var(--bearing);
   border-radius: 10px;
   background: var(--panel-solid);
-  color: var(--bearing);
+  color: var(--accent-strong);
   padding: 12px 16px;
   box-shadow: var(--shadow);
   z-index: 20;
@@ -1133,7 +1147,7 @@ th {
 }
 
 .runs-dock > button span {
-  color: var(--bearing);
+  color: var(--accent-strong);
   margin-left: 6px;
   font-family: var(--font-mono);
 }
@@ -1218,15 +1232,15 @@ th {
 }
 
 .status-badge.running {
-  color: var(--brass);
+  color: var(--brass-ink);
 }
 
 .status-badge.completed {
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 .status-badge.failed {
-  color: var(--bearing);
+  color: var(--accent-strong);
 }
 
 .stage-card,
@@ -1283,17 +1297,17 @@ th {
 }
 
 .stage.running {
-  color: var(--brass);
+  color: var(--brass-ink);
   border-color: var(--brass);
 }
 
 .stage.completed {
-  color: var(--good);
+  color: var(--good-ink);
   border-color: var(--good);
 }
 
 .stage.failed {
-  color: var(--bearing);
+  color: var(--accent-strong);
   border-color: var(--bearing);
 }
 
@@ -1380,6 +1394,7 @@ th {
 
 @media (max-width: 980px) {
   .topbar {
+    height: 64px;
     padding: 0 16px;
   }
 
@@ -1387,23 +1402,42 @@ th {
     top: 64px;
   }
 
+  /* Bottom row belongs to the panel toggle (left) and the Runs dock (right);
+     open plates sit above that row so neither covers the other. */
   .rail {
     top: auto;
-    bottom: 18px;
-    left: 18px;
-    right: 18px;
+    bottom: 72px;
+    left: 14px;
+    right: 14px;
     width: auto;
     max-height: 42vh;
   }
 
+  .rail.collapsed {
+    bottom: 14px;
+    right: auto;
+    padding: 6px;
+  }
+
   .detail-panel {
-    inset: 76px 14px 14px;
+    inset: 76px 14px 72px;
     width: auto;
     max-height: none;
   }
 
   .map-compass {
     left: 14px;
+    bottom: 70px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .map-hint {
+    display: none;
+  }
+
+  .runs-dock {
+    right: 14px;
     bottom: 14px;
   }
 
@@ -1437,11 +1471,6 @@ th {
   .facts-grid,
   .meta-grid {
     grid-template-columns: 1fr;
-  }
-
-  .runs-dock {
-    right: 14px;
-    bottom: 14px;
   }
 }
 

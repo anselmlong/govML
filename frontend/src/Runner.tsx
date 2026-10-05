@@ -45,12 +45,12 @@ export default function Runner() {
         <div>
           <h1>{run?.name ?? runId}</h1>
         </div>
-        <span className={`status-badge ${run?.status ?? 'running'}`}>
+        <span className={`status-badge ${run?.status ?? 'running'}`} role="status">
           {run?.status === 'running' && <Compass spinning size={13} />} {run?.status ?? 'loading'}
         </span>
       </header>
 
-      {error && <div className="toast">{error}</div>}
+      {error && <div className="toast" role="alert">{error}</div>}
       <PipelineStages lines={lines} failed={failed} />
 
       {completed && run && (

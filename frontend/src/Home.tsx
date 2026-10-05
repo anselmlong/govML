@@ -133,6 +133,15 @@ export default function Home() {
     if (selected) closeButtonRef.current?.focus();
   }, [selected]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeDetail();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected]);
+
   const agencyColors = useMemo(() => {
     const agencies = stats?.top_agencies.map((a) => a.agency) ?? [];
     const map = new Map<string, string>();
@@ -278,7 +287,7 @@ export default function Home() {
           onSelect={chooseDataset}
         />
         {loading && (
-          <div className="map-loading">
+          <div className="map-loading" role="status">
             <Compass spinning size={14} />
             Charting{stats?.total ? ` ${stats.total.toLocaleString()} datasets` : ''}&hellip;
           </div>
@@ -333,8 +342,14 @@ export default function Home() {
         </div>
       </header>
 
-      <aside className={`rail ${railOpen ? 'open' : 'collapsed'}`} aria-label="Catalog controls" aria-hidden={!railOpen}>
-        <button className="rail-toggle" onClick={() => setRailOpen((v) => !v)} aria-expanded={railOpen} title={railOpen ? 'Hide panel' : 'Show panel'}>
+      <aside id="catalog-rail" className={`rail ${railOpen ? 'open' : 'collapsed'}`} aria-label="Catalog controls">
+        <button
+          className="rail-toggle"
+          onClick={() => setRailOpen((v) => !v)}
+          aria-expanded={railOpen}
+          aria-controls="catalog-rail"
+          title={railOpen ? 'Hide panel' : 'Show panel'}
+        >
           {railOpen ? (
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -349,10 +364,10 @@ export default function Home() {
         <div className="rail-group">
         <div className="segmented">
           <span className={`indicator ${mode === 'ask' ? 'pos-1' : ''}`} aria-hidden="true" />
-          <button className={mode === 'search' ? 'selected' : ''} onClick={() => setMode('search')}>
+          <button className={mode === 'search' ? 'selected' : ''} aria-pressed={mode === 'search'} onClick={() => setMode('search')}>
             Search
           </button>
-          <button className={mode === 'ask' ? 'selected' : ''} onClick={() => setMode('ask')}>
+          <button className={mode === 'ask' ? 'selected' : ''} aria-pressed={mode === 'ask'} onClick={() => setMode('ask')}>
             Ask
           </button>
         </div>
@@ -401,7 +416,7 @@ export default function Home() {
           </div>
         )}
 
-        {answer && <div className="answer">{renderAnswer(answer)}</div>}
+        {answer && <div className="answer" aria-live="polite">{renderAnswer(answer)}</div>}
         </div>
 
         <div className="rail-divider" role="separator" />
@@ -411,7 +426,7 @@ export default function Home() {
             <span>Color</span>
             <div className="mini-toggle">
               <span className="indicator" aria-hidden="true" />
-              <button className="selected" onClick={() => setColorMode('agency')}>
+              <button className="selected" aria-pressed={colorMode === 'agency'} onClick={() => setColorMode('agency')}>
                 Agency
               </button>
             </div>
@@ -422,14 +437,15 @@ export default function Home() {
 
         <div className="rail-group">
         <p className="section-label">Agencies</p>
-        <div className="chips" aria-label="Agency filter">
-          <button className={!agencyFilter ? 'selected' : ''} onClick={() => setAgencyFilter(null)}>
+        <div className="chips" role="group" aria-label="Agency filter">
+          <button className={!agencyFilter ? 'selected' : ''} aria-pressed={!agencyFilter} onClick={() => setAgencyFilter(null)}>
             All
           </button>
           {stats?.top_agencies.slice(0, 10).map((agency) => (
             <button
               key={agency.agency}
               className={agencyFilter === agency.agency ? 'selected' : ''}
+              aria-pressed={agencyFilter === agency.agency}
               style={{ borderColor: agencyColors.get(agency.agency) }}
               onClick={() => setAgencyFilter(agency.agency)}
             >
@@ -455,9 +471,13 @@ export default function Home() {
         ) : (
           <div className="result-list">
             {listItems.map((item, index) => (
-              <button key={item.dataset_id} onClick={() => chooseDataset(item, true)}>
+              <button
+                key={item.dataset_id}
+                aria-current={selected?.dataset_id === item.dataset_id ? 'true' : undefined}
+                onClick={() => chooseDataset(item, true)}
+              >
                 <span className="manifest-index">{String(index + 1).padStart(2, '0')}</span>
-                <span className="agency-dot" style={{ background: nodeColor(item) }} />
+                <span className="agency-dot" aria-hidden="true" style={{ background: nodeColor(item) }} />
                 <b>{item.name}</b>
                 <small>
                   {item.agency || 'Unknown'} &nbsp;•&nbsp; {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
@@ -478,7 +498,7 @@ export default function Home() {
           </button>
           <h2>{info?.name || selected.name}</h2>
           <p className="agency-line">{info?.agency || selected.agency || 'Singapore open data'}</p>
-          {detailLoading && <p className="muted">Loading dataset preview...</p>}
+          {detailLoading && <p className="muted" role="status">Loading dataset preview...</p>}
           <div className={`fit-badge ${fit?.tone ?? 'marginal'}`}>
             <b>{fit ? fit.score : selected.suitability_score ?? 'NA'}</b>
             <span>{fit?.verdict ?? selected.suitability_tone ?? 'Not scored yet'}</span>
@@ -559,7 +579,7 @@ export default function Home() {
         </aside>
       )}
 
-      {error && <div className="toast">{error}</div>}
+      {error && <div className="toast" role="alert">{error}</div>}
       <RunsDock />
     </main>
   );
