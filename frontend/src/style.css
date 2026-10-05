@@ -352,6 +352,9 @@ code {
 }
 
 .attribution-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
@@ -430,7 +433,7 @@ code {
   top: 96px;
   left: 24px;
   width: min(390px, calc(100vw - 48px));
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 220px);
   overflow: auto;
   display: grid;
   gap: 16px;
@@ -548,6 +551,32 @@ code {
 .segmented .selected,
 .mini-toggle .selected {
   color: var(--bg);
+}
+
+/* Single-option toggle: size to its content instead of leaving an empty half. */
+.mini-toggle {
+  grid-template-columns: auto;
+}
+
+.mini-toggle .indicator {
+  inset: 3px;
+}
+
+.mini-toggle button {
+  padding: 6px 14px;
+}
+
+.chip-count {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.chips .selected .chip-count {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .search-field {
@@ -779,9 +808,14 @@ button:disabled:hover {
   border-bottom: 0;
 }
 
-.result-list button:hover {
+.result-list button:hover,
+.result-list button[aria-current='true'] {
   background: var(--surface);
   border-radius: 10px;
+}
+
+.result-list button[aria-current='true'] .manifest-index {
+  color: var(--accent-strong);
 }
 
 .manifest-index {
@@ -929,8 +963,19 @@ button:disabled:hover {
   padding: 24px;
 }
 
-.close-button {
-  justify-self: end;
+/* Pinned to the plate's corner so the title can start at the top edge. */
+.detail-panel .close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.detail-panel h2 {
+  padding-right: 52px;
+}
+
+.ext-arrow {
+  flex: none;
 }
 
 .agency-line {
@@ -1011,11 +1056,32 @@ button:disabled:hover {
   color: var(--link);
   text-decoration: none;
   font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.source-link,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+}
+
+.completion-card a {
+  justify-self: end;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.completion-card a:hover {
+  border-color: var(--link);
+  text-decoration: none;
 }
 
 .source-link:hover,
 .back-link:hover,
-.completion-card a:hover,
 .run-row a:hover {
   text-decoration: underline;
 }
@@ -1385,6 +1451,12 @@ th {
   line-height: 1.45;
 }
 
+.log-card button {
+  background: transparent;
+  color: var(--text);
+  padding: 7px 14px;
+}
+
 .log-card h2 {
   margin: 0;
   font-family: var(--font-display);
@@ -1436,6 +1508,16 @@ th {
     display: none;
   }
 
+  /* the plates are translucent; don't let the compass ghost through them */
+  .home-shell.rail-open .map-compass,
+  .home-shell.detail-open .map-compass {
+    visibility: hidden;
+  }
+
+  .rail.open {
+    gap: 12px;
+  }
+
   .runs-dock {
     right: 14px;
     bottom: 14px;
@@ -1471,6 +1553,10 @@ th {
   .facts-grid,
   .meta-grid {
     grid-template-columns: 1fr;
+  }
+
+  .completion-card a {
+    justify-self: start;
   }
 }
 

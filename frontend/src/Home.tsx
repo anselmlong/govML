@@ -274,7 +274,7 @@ export default function Home() {
   const displayedDescription = expanded || description.length < 360 ? description : `${description.slice(0, 360)}...`;
 
   return (
-    <main className="home-shell">
+    <main className={`home-shell${railOpen ? ' rail-open' : ''}${selected ? ' detail-open' : ''}`}>
       <section className="map-stage" aria-label="Semantic dataset map">
         <MapCanvas
           ref={mapRef}
@@ -310,7 +310,10 @@ export default function Home() {
         </a>
         <div className="nav-actions">
           <a className="attribution-link" href="https://data.gov.sg" target="_blank" rel="noreferrer">
-            Data from data.gov.sg ↗
+            Data from data.gov.sg
+            <svg className="ext-arrow" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M4 2.5h5.5V8M9.5 2.5L2.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </a>
           <button
             className="icon-button"
@@ -449,7 +452,7 @@ export default function Home() {
               style={{ borderColor: agencyColors.get(agency.agency) }}
               onClick={() => setAgencyFilter(agency.agency)}
             >
-              {agency.agency || 'Unknown'} {agency.count}
+              {agency.agency || 'Unknown'} <span className="chip-count">{agency.count}</span>
             </button>
           ))}
         </div>
@@ -498,7 +501,7 @@ export default function Home() {
           </button>
           <h2>{info?.name || selected.name}</h2>
           <p className="agency-line">{info?.agency || selected.agency || 'Singapore open data'}</p>
-          {detailLoading && <p className="muted" role="status">Loading dataset preview...</p>}
+          {detailLoading && <p className="muted" role="status">Loading dataset preview&hellip;</p>}
           <div className={`fit-badge ${fit?.tone ?? 'marginal'}`}>
             <b>{fit ? fit.score : selected.suitability_score ?? 'NA'}</b>
             <span>{fit?.verdict ?? selected.suitability_tone ?? 'Not scored yet'}</span>
@@ -512,6 +515,9 @@ export default function Home() {
           {info?.url && (
             <a className="source-link" href={info.url} target="_blank" rel="noreferrer">
               Source
+              <svg className="ext-arrow" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M4 2.5h5.5V8M9.5 2.5L2.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </a>
           )}
           <div className="meta-grid">
