@@ -5,6 +5,14 @@ import Compass from './Compass';
 import PipelineStages from './PipelineStages';
 import { useCountUp } from './useCountUp';
 
+// Errors in target units (e.g. dollars) read better grouped than in
+// exponent form; ratios and scores keep four significant figures.
+function formatMetric(value: number | null) {
+  if (value === null) return 'NA';
+  if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return value.toPrecision(4);
+}
+
 export default function Runner() {
   const { runId = '' } = useParams();
   const [run, setRun] = useState<RunRecord | null>(null);
@@ -40,17 +48,20 @@ export default function Runner() {
     <main className="runner-shell">
       <header className="runner-header">
         <Link to="/" className="back-link">
-          ← Back
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
         </Link>
         <div>
           <h1>{run?.name ?? runId}</h1>
         </div>
-        <span className={`status-badge ${run?.status ?? 'running'}`}>
+        <span className={`status-badge ${run?.status ?? 'running'}`} role="status">
           {run?.status === 'running' && <Compass spinning size={13} />} {run?.status ?? 'loading'}
         </span>
       </header>
 
-      {error && <div className="toast">{error}</div>}
+      {error && <div className="toast" role="alert">{error}</div>}
       <PipelineStages lines={lines} failed={failed} />
 
       {completed && run && (
@@ -63,22 +74,22 @@ export default function Runner() {
             <>
               <div>
                 <span>Accuracy</span>
-                <b>{accuracy !== null ? accuracy.toPrecision(4) : 'NA'}</b>
+                <b>{formatMetric(accuracy)}</b>
               </div>
               <div>
                 <span>F1</span>
-                <b>{f1 !== null ? f1.toPrecision(4) : 'NA'}</b>
+                <b>{formatMetric(f1)}</b>
               </div>
             </>
           ) : (
             <>
               <div>
                 <span>MAE</span>
-                <b>{mae !== null ? mae.toPrecision(4) : 'NA'}</b>
+                <b>{formatMetric(mae)}</b>
               </div>
               <div>
                 <span>R2</span>
-                <b>{r2 !== null ? r2.toPrecision(4) : 'NA'}</b>
+                <b>{formatMetric(r2)}</b>
               </div>
             </>
           )}
@@ -93,7 +104,7 @@ export default function Runner() {
           <h2>Run Log</h2>
           <button onClick={() => setShowRaw((value) => !value)}>{showRaw ? 'Hide raw' : 'Show raw'}</button>
         </div>
-        {showRaw ? <pre ref={logRef}>{lines.join('\n')}</pre> : <p>{lines[lines.length - 1] ?? 'Waiting for pipeline output...'}</p>}
+        {showRaw ? <pre ref={logRef}>{lines.join('\n')}</pre> : <p>{lines[lines.length - 1] ?? 'Waiting for pipeline output\u2026'}</p>}
       </section>
     </main>
   );

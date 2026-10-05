@@ -1,11 +1,20 @@
+import { useRef } from 'react';
+
 interface CompassProps {
   size?: number;
+  /** Degrees clockwise from north for the needle; undefined rests at north. */
+  bearing?: number;
   spinning?: boolean;
   signature?: boolean;
   className?: string;
 }
 
-export default function Compass({ size = 16, spinning = false, signature = false, className = '' }: CompassProps) {
+export default function Compass({ size = 16, bearing, spinning = false, signature = false, className = '' }: CompassProps) {
+  // Accumulate the heading so the needle always swings the short way round
+  // (350° → 10° turns 20°, not back through south).
+  const heading = useRef(0);
+  const target = bearing ?? 0;
+  heading.current += ((((target - heading.current) % 360) + 540) % 360) - 180;
   const cls = ['compass-glyph', spinning ? 'is-spinning' : '', signature ? 'is-signature' : '', className].filter(Boolean).join(' ');
   return (
     <svg
@@ -28,7 +37,7 @@ export default function Compass({ size = 16, spinning = false, signature = false
         <path d="M6.7 25.3L8.9 23.1" />
         <path d="M23.1 8.9L25.3 6.7" />
       </g>
-      <g className="compass-needle">
+      <g className="compass-needle" style={heading.current ? { transform: `rotate(${heading.current}deg)` } : undefined}>
         <path d="M16 6.5L19.6 16L16 15.1Z" className="compass-needle-fwd" />
         <path d="M16 25.5L12.4 16L16 16.9Z" className="compass-needle-aft" />
       </g>

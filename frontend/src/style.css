@@ -14,13 +14,17 @@
   --brass: #a5824a;
   --mist: #7c8f93;
   --good: #3f7d52;
+  /* text-safe variants of the chart inks (≥4.5:1 on paper and surface) */
+  --brass-ink: #7a5a26;
+  --good-ink: #2f6340;
+  --on-accent: #ffffff;
 
   --bg: var(--paper);
   --panel: rgba(251, 246, 233, 0.92);
   --panel-solid: #fbf6e9;
   --surface: #ece1c6;
   --text: var(--ink);
-  --muted: #5c6a6c;
+  --muted: #4f5c5e;
   --line: rgba(22, 38, 45, 0.16);
   --map: #f6efdd;
   --map-grid: rgba(47, 110, 127, 0.14);
@@ -51,6 +55,9 @@
   --good: #5ea377;
   --mist: #93a3a3;
   --bearing: #d97a4c;
+  --brass-ink: #c7a565;
+  --good-ink: #5ea377;
+  --on-accent: #0f1c21;
 }
 
 * {
@@ -95,7 +102,14 @@ a {
 
 ::selection {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
+}
+
+input[type='checkbox'] {
+  accent-color: var(--bearing);
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 ::-webkit-scrollbar {
@@ -338,6 +352,9 @@ code {
 }
 
 .attribution-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
@@ -416,7 +433,7 @@ code {
   top: 96px;
   left: 24px;
   width: min(390px, calc(100vw - 48px));
-  max-height: calc(100vh - 128px);
+  max-height: calc(100vh - 220px);
   overflow: auto;
   display: grid;
   gap: 16px;
@@ -488,7 +505,7 @@ code {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 400;
-  color: var(--mist);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -534,6 +551,32 @@ code {
 .segmented .selected,
 .mini-toggle .selected {
   color: var(--bg);
+}
+
+/* Single-option toggle: size to its content instead of leaving an empty half. */
+.mini-toggle {
+  grid-template-columns: auto;
+}
+
+.mini-toggle .indicator {
+  inset: 3px;
+}
+
+.mini-toggle button {
+  padding: 6px 14px;
+}
+
+.chip-count {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.chips .selected .chip-count {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .search-field {
@@ -606,7 +649,7 @@ code {
 .catalog-build button:hover {
   background: var(--bearing);
   border-color: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 button:disabled {
@@ -632,6 +675,11 @@ button:disabled:hover {
 .compass-glyph .compass-needle-aft {
   fill: currentColor;
   opacity: 0.4;
+}
+
+.compass-glyph .compass-needle {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
 }
 
 .compass-glyph.is-signature .compass-needle-fwd {
@@ -702,7 +750,7 @@ button:disabled:hover {
 .chips .selected {
   border-color: var(--bearing);
   background: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .answer,
@@ -765,9 +813,14 @@ button:disabled:hover {
   border-bottom: 0;
 }
 
-.result-list button:hover {
+.result-list button:hover,
+.result-list button[aria-current='true'] {
   background: var(--surface);
   border-radius: 10px;
+}
+
+.result-list button[aria-current='true'] .manifest-index {
+  color: var(--accent-strong);
 }
 
 .manifest-index {
@@ -776,7 +829,7 @@ button:disabled:hover {
   margin-top: 3px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--mist);
+  color: var(--muted);
 }
 
 .result-list b {
@@ -837,7 +890,7 @@ button:disabled:hover {
 }
 
 .build-error {
-  color: var(--bearing);
+  color: var(--accent-strong);
 }
 
 .catalog-build-stages {
@@ -908,15 +961,26 @@ button:disabled:hover {
   top: 96px;
   right: 24px;
   width: min(520px, calc(100vw - 48px));
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 184px);
   overflow: auto;
   display: grid;
   gap: 15px;
   padding: 24px;
 }
 
-.close-button {
-  justify-self: end;
+/* Pinned to the plate's corner so the title can start at the top edge. */
+.detail-panel .close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.detail-panel h2 {
+  padding-right: 52px;
+}
+
+.ext-arrow {
+  flex: none;
 }
 
 .agency-line {
@@ -997,11 +1061,32 @@ button:disabled:hover {
   color: var(--link);
   text-decoration: none;
   font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.source-link,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+}
+
+.completion-card a {
+  justify-self: end;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.completion-card a:hover {
+  border-color: var(--link);
+  text-decoration: none;
 }
 
 .source-link:hover,
 .back-link:hover,
-.completion-card a:hover,
 .run-row a:hover {
   text-decoration: underline;
 }
@@ -1090,14 +1175,14 @@ th {
   font-weight: 700;
   background: var(--bearing);
   border-color: var(--bearing);
-  color: #ffffff;
+  color: var(--on-accent);
   justify-content: center;
 }
 
 .launch-button:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .toast {
@@ -1109,7 +1194,7 @@ th {
   border: 1px solid var(--bearing);
   border-radius: 10px;
   background: var(--panel-solid);
-  color: var(--bearing);
+  color: var(--accent-strong);
   padding: 12px 16px;
   box-shadow: var(--shadow);
   z-index: 20;
@@ -1133,7 +1218,7 @@ th {
 }
 
 .runs-dock > button span {
-  color: var(--bearing);
+  color: var(--accent-strong);
   margin-left: 6px;
   font-family: var(--font-mono);
 }
@@ -1218,15 +1303,15 @@ th {
 }
 
 .status-badge.running {
-  color: var(--brass);
+  color: var(--brass-ink);
 }
 
 .status-badge.completed {
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 .status-badge.failed {
-  color: var(--bearing);
+  color: var(--accent-strong);
 }
 
 .stage-card,
@@ -1283,17 +1368,17 @@ th {
 }
 
 .stage.running {
-  color: var(--brass);
+  color: var(--brass-ink);
   border-color: var(--brass);
 }
 
 .stage.completed {
-  color: var(--good);
+  color: var(--good-ink);
   border-color: var(--good);
 }
 
 .stage.failed {
-  color: var(--bearing);
+  color: var(--accent-strong);
   border-color: var(--bearing);
 }
 
@@ -1371,6 +1456,12 @@ th {
   line-height: 1.45;
 }
 
+.log-card button {
+  background: transparent;
+  color: var(--text);
+  padding: 7px 14px;
+}
+
 .log-card h2 {
   margin: 0;
   font-family: var(--font-display);
@@ -1380,6 +1471,7 @@ th {
 
 @media (max-width: 980px) {
   .topbar {
+    height: 64px;
     padding: 0 16px;
   }
 
@@ -1387,23 +1479,52 @@ th {
     top: 64px;
   }
 
+  /* Bottom row belongs to the panel toggle (left) and the Runs dock (right);
+     open plates sit above that row so neither covers the other. */
   .rail {
     top: auto;
-    bottom: 18px;
-    left: 18px;
-    right: 18px;
+    bottom: 72px;
+    left: 14px;
+    right: 14px;
     width: auto;
     max-height: 42vh;
   }
 
+  .rail.collapsed {
+    bottom: 14px;
+    right: auto;
+    padding: 6px;
+  }
+
   .detail-panel {
-    inset: 76px 14px 14px;
+    inset: 76px 14px 72px;
     width: auto;
     max-height: none;
   }
 
   .map-compass {
     left: 14px;
+    bottom: 70px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .map-hint {
+    display: none;
+  }
+
+  /* the plates are translucent; don't let the compass ghost through them */
+  .home-shell.rail-open .map-compass,
+  .home-shell.detail-open .map-compass {
+    visibility: hidden;
+  }
+
+  .rail.open {
+    gap: 12px;
+  }
+
+  .runs-dock {
+    right: 14px;
     bottom: 14px;
   }
 
@@ -1439,9 +1560,8 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .runs-dock {
-    right: 14px;
-    bottom: 14px;
+  .completion-card a {
+    justify-self: start;
   }
 }
 
@@ -1542,6 +1662,12 @@ th {
   .map-dot:hover {
     animation: none;
     transform: scale(1.6);
+  }
+
+  /* A picked dataset swings the chart's needle toward it, fast at first and
+     easing onto its heading. */
+  .compass-glyph.is-signature .compass-needle {
+    transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .map-compass:hover .compass-glyph {
