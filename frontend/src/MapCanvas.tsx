@@ -73,7 +73,11 @@ function MapCanvas(
   const fitTransform = useCallback((): ZoomTransform => {
     const canvas = canvasRef.current;
     if (!canvas) return zoomIdentity;
-    const k = Math.min(canvas.clientWidth / DESIGN_W, canvas.clientHeight / DESIGN_H);
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    // a strict contain-fit leaves a thin strip of dots on a tall phone screen;
+    // there, trade the sparse outer edges (still a pan away) for legible clusters
+    const k = H > W ? Math.min(H / DESIGN_H, (W / DESIGN_W) * 1.5) : Math.min(W / DESIGN_W, H / DESIGN_H);
     return zoomIdentity.translate(
       (canvas.clientWidth - DESIGN_W * k) / 2,
       (canvas.clientHeight - DESIGN_H * k) / 2
@@ -169,13 +173,14 @@ function MapCanvas(
     tfRef.current = fitTransform();
 
     const behavior = zoom<HTMLCanvasElement, unknown>()
-      .scaleExtent([0.6, 22])
+      .scaleExtent([0.5, 22])
       .translateExtent([
         [0, 0],
         [DESIGN_W, DESIGN_H]
       ])
-      .on('start', () => {
-        movedRef.current = true;
+      .on('start', (event) => {
+        // only a person dragging or zooming counts; programmatic fits don't
+        if (event.sourceEvent) movedRef.current = true;
         canvas.style.cursor = 'grabbing';
       })
       .on('zoom', (event) => {
@@ -187,6 +192,8 @@ function MapCanvas(
       });
     select(canvas).call(behavior).on('dblclick.zoom', null);
     behaviorRef.current = behavior;
+    // seed d3 with the fitted view, or the first drag snaps back to identity
+    select(canvas).call(behavior.transform, tfRef.current);
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     staticRef.current = reduceMotion;
@@ -206,7 +213,7 @@ function MapCanvas(
     }
 
     const ro = new ResizeObserver(() => {
-      if (!movedRef.current) tfRef.current = fitTransform();
+      if (!movedRef.current) select(canvas).call(behavior.transform, fitTransform());
       if (reduceMotion) draw(performance.now());
     });
     ro.observe(canvas);

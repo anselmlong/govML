@@ -169,7 +169,6 @@ code {
   background-size: auto, 64px 64px, 64px 64px, auto;
 }
 
-.map-stage svg,
 .map-stage canvas {
   width: 100%;
   height: 100%;
@@ -208,60 +207,6 @@ code {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.map-stage svg:active {
-  cursor: grabbing;
-}
-
-.map-nodes {
-  transform-box: view-box;
-  transform-origin: center;
-}
-
-.map-dot {
-  stroke: none;
-  outline: none;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: opacity 160ms ease, r 160ms ease, fill 300ms ease;
-  animation: dot-drift var(--drift-dur, 8s) ease-in-out var(--drift-delay, 0s) infinite alternate;
-}
-
-@keyframes dot-drift {
-  from {
-    transform: translate(0, 0) scale(1);
-  }
-  to {
-    transform: translate(var(--dx, 2px), var(--dy, -2px)) scale(1.12);
-  }
-}
-
-/* matched dots breathe brighter while a search is active */
-.map-dot.matched {
-  animation:
-    dot-drift var(--drift-dur, 8s) ease-in-out var(--drift-delay, 0s) infinite alternate,
-    dot-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes dot-pulse {
-  0%,
-  100% {
-    opacity: 0.86;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.map-dot.active {
-  stroke: var(--bearing);
-  stroke-width: 2;
-}
-
-.map-dot.matched {
-  stroke: var(--depth);
-  stroke-width: 1;
 }
 
 .map-loading,
@@ -854,10 +799,25 @@ button:disabled:hover {
   grid-column: 3;
   grid-row: 2;
   min-width: 0;
+  display: flex;
+  gap: 6px;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.result-agency {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.result-fit {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-fit span {
+  margin-right: 2px;
 }
 
 .result-skeleton {
@@ -1112,6 +1072,10 @@ button:disabled:hover {
 .meta-grid span,
 .facts-grid span,
 .completion-card span {
+  color: var(--muted);
+}
+
+.meta-grid.is-loading b {
   color: var(--muted);
 }
 
@@ -1532,10 +1496,17 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .completion-card,
+  .completion-card {
+    grid-template-columns: 1fr;
+  }
+
   .facts-grid,
   .meta-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .status-badge {
+    justify-self: start;
   }
 
   .completion-card a {
@@ -1567,15 +1538,6 @@ th {
 /* Motion is additive: base states are already correct with zero animation,
    so reduced-motion users lose only the enhancement, never information. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes map-nodes-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
   @keyframes panel-in {
     from {
       opacity: 0;
@@ -1593,7 +1555,7 @@ th {
     }
   }
 
-  @keyframes dot-pulse {
+  @keyframes run-pulse {
     to {
       box-shadow: 0 0 0 6px rgba(165, 130, 74, 0);
     }
@@ -1646,11 +1608,7 @@ th {
   }
 
   .run-dot.running {
-    animation: dot-pulse 1.6s ease-out infinite;
-  }
-
-  .map-nodes {
-    animation: map-nodes-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: run-pulse 1.6s ease-out infinite;
   }
 
   .detail-panel {
@@ -1666,17 +1624,6 @@ th {
   .segmented .indicator,
   .mini-toggle .indicator {
     transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .map-dot {
-    transition: opacity 160ms ease, r 160ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1), fill 300ms ease;
-    /* pause ambient drift on hover so the scale-up feels deliberate */
-    animation-play-state: paused;
-  }
-
-  .map-dot:hover {
-    animation: none;
-    transform: scale(1.6);
   }
 
   /* A picked dataset swings the chart's needle toward it, fast at first and
