@@ -41,6 +41,9 @@ function MapCanvas(
   const movedRef = useRef(false);
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const hoverIdRef = useRef<string | null>(null);
+  // reduced motion: no drift, no entrance fade; repaint only when something changes
+  const staticRef = useRef(false);
+  const redrawRef = useRef<() => void>(() => undefined);
   const [tooltip, setTooltip] = useState<{ name: string; agency: string; x: number; y: number } | null>(null);
 
   // keep latest props reachable from the rAF loop without resubscribing zoom
@@ -103,7 +106,8 @@ function MapCanvas(
       const cs = getComputedStyle(canvas);
       const bearing = cs.getPropertyValue('--bearing').trim() || '#2f6e7f';
       const depth = cs.getPropertyValue('--depth').trim() || '#333';
-      const t = time * 0.001; // seconds
+      const still = staticRef.current;
+      const t = still ? 0 : time * 0.001; // seconds
       const elapsed = (time - mountRef.current) * 0.001;
 
       for (let i = 0; i < n.length; i++) {
@@ -132,7 +136,7 @@ function MapCanvas(
         // opacity semantics preserved from the SVG version
         let alpha = filtered ? 0.08 : isMatched || active || !hasResults ? 0.86 : 0.24;
         // entrance cascade over the first ~1.6s after mount
-        const appear = Math.min(1, Math.max(0, (elapsed - (ph ? ph.stag * 0.9 : 0)) / 0.5));
+        const appear = still ? 1 : Math.min(1, Math.max(0, (elapsed - (ph ? ph.stag * 0.9 : 0)) / 0.5));
         alpha *= appear;
 
         if (alpha <= 0.01) continue;
@@ -176,6 +180,7 @@ function MapCanvas(
       })
       .on('zoom', (event) => {
         tfRef.current = event.transform;
+        redrawRef.current();
       })
       .on('end', () => {
         canvas.style.cursor = hoverIdRef.current ? "pointer" : "grab";
@@ -184,8 +189,13 @@ function MapCanvas(
     behaviorRef.current = behavior;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    staticRef.current = reduceMotion;
     let raf = 0;
     if (reduceMotion) {
+      redrawRef.current = () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(draw);
+      };
       draw(performance.now());
     } else {
       const loop = (t: number) => {
@@ -203,11 +213,17 @@ function MapCanvas(
 
     return () => {
       cancelAnimationFrame(raf);
+      redrawRef.current = () => undefined;
       ro.disconnect();
       select(canvas).on('.zoom', null);
       behaviorRef.current = null;
     };
   }, [draw, fitTransform]);
+
+  // the animated loop picks up prop changes on its own; a still map must be told
+  useEffect(() => {
+    redrawRef.current();
+  }, [nodes, colorFor, agencyFilter, selectedId, matchedIds, hasResults]);
 
   // hover cursor + suppression of click-after-drag
   useEffect(() => {
@@ -241,6 +257,7 @@ function MapCanvas(
     const onMove = (event: PointerEvent) => {
       const { x, y } = toUser(event.clientX, event.clientY);
       const hit = pick(x, y);
+      if ((hit?.dataset_id ?? null) !== hoverIdRef.current) redrawRef.current();
       hoverIdRef.current = hit?.dataset_id ?? null;
       canvas.style.cursor = hit ? 'pointer' : 'grab';
       if (hit) {

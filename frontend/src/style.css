@@ -105,6 +105,11 @@ a {
   color: var(--on-accent);
 }
 
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 input[type='checkbox'] {
   accent-color: var(--bearing);
   width: 16px;
@@ -964,6 +969,7 @@ button:disabled:hover {
   max-height: calc(100vh - 184px);
   overflow: auto;
   display: grid;
+  grid-auto-rows: max-content;
   gap: 15px;
   padding: 24px;
 }
@@ -1233,7 +1239,7 @@ th {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--panel);
+  background: var(--panel-solid);
   box-shadow: var(--shadow);
 }
 
@@ -1404,34 +1410,6 @@ th {
   grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 12px;
   align-items: center;
-  animation: card-rise 480ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes card-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* celebratory flash when a run lands */
-@keyframes success-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(63, 125, 82, 0.55);
-  }
-  100% {
-    box-shadow: 0 0 0 22px rgba(63, 125, 82, 0);
-  }
-}
-
-.completion-card.completed {
-  animation:
-    card-rise 480ms cubic-bezier(0.16, 1, 0.3, 1),
-    success-glow 1.4s ease-out 200ms 2;
 }
 
 .completion-card div {
@@ -1565,6 +1543,27 @@ th {
   }
 }
 
+/* Fingers need a full 44px target; mouse users keep the denser controls. */
+@media (pointer: coarse) {
+  .rail-toggle,
+  .runs-dock > button,
+  .segmented button,
+  .mini-toggle button,
+  .log-card button,
+  .text-button,
+  .source-link,
+  .back-link,
+  .run-row a {
+    min-height: 44px;
+  }
+
+  .run-row a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+}
+
 /* Motion is additive: base states are already correct with zero animation,
    so reduced-motion users lose only the enhancement, never information. */
 @media (prefers-reduced-motion: no-preference) {
@@ -1626,8 +1625,24 @@ th {
     animation: stage-icon-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* celebratory flash when a run lands */
+  @keyframes success-glow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(63, 125, 82, 0.45);
+    }
+    100% {
+      box-shadow: 0 0 0 18px rgba(63, 125, 82, 0);
+    }
+  }
+
   .completion-card {
     animation: completion-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .completion-card.completed {
+    animation:
+      completion-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both,
+      success-glow 1.4s ease-out 200ms;
   }
 
   .run-dot.running {

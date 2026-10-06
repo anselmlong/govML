@@ -17,15 +17,24 @@ export default function RunsDock() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const running = runs.filter((run) => run.status === 'running').length;
 
   return (
     <div className="runs-dock">
-      <button onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+      <button onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="runs-menu">
         Runs <b>{runs.length}</b> {running ? <span>{running} running</span> : null}
       </button>
       {open && (
-        <div className="runs-menu">
+        <div className="runs-menu" id="runs-menu">
           {runs.slice(0, 8).map((run) => (
             <div key={run.run_id} className="run-row">
               <span className={`run-dot ${run.status}`} />
