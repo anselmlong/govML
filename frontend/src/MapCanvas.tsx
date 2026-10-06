@@ -44,6 +44,8 @@ function MapCanvas(
   // reduced motion: no drift, no entrance fade; repaint only when something changes
   const staticRef = useRef(false);
   const redrawRef = useRef<() => void>(() => undefined);
+  // when the current pick was made, for its one-off sounding rings
+  const pickRef = useRef<{ id?: string; at: number }>({ at: 0 });
   const [tooltip, setTooltip] = useState<{ name: string; agency: string; x: number; y: number } | null>(null);
 
   // keep latest props reachable from the rAF loop without resubscribing zoom
@@ -113,6 +115,9 @@ function MapCanvas(
       const still = staticRef.current;
       const t = still ? 0 : time * 0.001; // seconds
       const elapsed = (time - mountRef.current) * 0.001;
+      if (pickRef.current.id !== sel) pickRef.current = { id: sel, at: time };
+      let pickX = NaN;
+      let pickY = NaN;
 
       for (let i = 0; i < n.length; i++) {
         const node = n[i];
@@ -130,6 +135,10 @@ function MapCanvas(
         const oy = Math.cos(t * w * 0.83 + phi * 1.7) * amp;
         const cx = node.x * 940 + 30 + ox;
         const cy = node.y * 640 + 30 + oy;
+        if (active) {
+          pickX = cx;
+          pickY = cy;
+        }
 
         // gentle size breathing
         let r = (isMatched ? 3.2 : 2.2) * (1 + 0.14 * Math.sin(t * w * 1.3 + phi * 2.1));
@@ -156,6 +165,23 @@ function MapCanvas(
           // ring drawn in screen-space width so it stays crisp at any zoom
           ctx.lineWidth = 2 / tf.k;
           ctx.strokeStyle = active ? bearing : emphasized ? bearing : depth;
+          ctx.stroke();
+        }
+      }
+
+      // Sounding: a picked dataset sends out two widening rings, like a depth
+      // sounding marked on a chart, so the eye lands on it after the fly-in.
+      const since = time - pickRef.current.at;
+      if (Number.isFinite(pickX) && !still && since < 1700) {
+        ctx.strokeStyle = bearing;
+        ctx.lineWidth = 1.5 / tf.k;
+        for (const delay of [320, 620]) {
+          const p = (since - delay) / 1000;
+          if (p <= 0 || p >= 1) continue;
+          const eased = 1 - Math.pow(1 - p, 3);
+          ctx.globalAlpha = 0.8 * (1 - p);
+          ctx.beginPath();
+          ctx.arc(pickX, pickY, (6 + 34 * eased) / tf.k, 0, Math.PI * 2);
           ctx.stroke();
         }
       }
