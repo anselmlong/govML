@@ -105,6 +105,11 @@ a {
   color: var(--on-accent);
 }
 
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 input[type='checkbox'] {
   accent-color: var(--bearing);
   width: 16px;
@@ -164,7 +169,6 @@ code {
   background-size: auto, 64px 64px, 64px 64px, auto;
 }
 
-.map-stage svg,
 .map-stage canvas {
   width: 100%;
   height: 100%;
@@ -203,60 +207,6 @@ code {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.map-stage svg:active {
-  cursor: grabbing;
-}
-
-.map-nodes {
-  transform-box: view-box;
-  transform-origin: center;
-}
-
-.map-dot {
-  stroke: none;
-  outline: none;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: opacity 160ms ease, r 160ms ease, fill 300ms ease;
-  animation: dot-drift var(--drift-dur, 8s) ease-in-out var(--drift-delay, 0s) infinite alternate;
-}
-
-@keyframes dot-drift {
-  from {
-    transform: translate(0, 0) scale(1);
-  }
-  to {
-    transform: translate(var(--dx, 2px), var(--dy, -2px)) scale(1.12);
-  }
-}
-
-/* matched dots breathe brighter while a search is active */
-.map-dot.matched {
-  animation:
-    dot-drift var(--drift-dur, 8s) ease-in-out var(--drift-delay, 0s) infinite alternate,
-    dot-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes dot-pulse {
-  0%,
-  100% {
-    opacity: 0.86;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.map-dot.active {
-  stroke: var(--bearing);
-  stroke-width: 2;
-}
-
-.map-dot.matched {
-  stroke: var(--depth);
-  stroke-width: 1;
 }
 
 .map-loading,
@@ -849,10 +799,25 @@ button:disabled:hover {
   grid-column: 3;
   grid-row: 2;
   min-width: 0;
+  display: flex;
+  gap: 6px;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.result-agency {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.result-fit {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-fit span {
+  margin-right: 2px;
 }
 
 .result-skeleton {
@@ -964,6 +929,7 @@ button:disabled:hover {
   max-height: calc(100vh - 184px);
   overflow: auto;
   display: grid;
+  grid-auto-rows: max-content;
   gap: 15px;
   padding: 24px;
 }
@@ -1109,6 +1075,10 @@ button:disabled:hover {
   color: var(--muted);
 }
 
+.meta-grid.is-loading b {
+  color: var(--muted);
+}
+
 .meta-grid b,
 .facts-grid b {
   font-family: var(--font-mono);
@@ -1233,7 +1203,7 @@ th {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--panel);
+  background: var(--panel-solid);
   box-shadow: var(--shadow);
 }
 
@@ -1404,34 +1374,6 @@ th {
   grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 12px;
   align-items: center;
-  animation: card-rise 480ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes card-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* celebratory flash when a run lands */
-@keyframes success-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(63, 125, 82, 0.55);
-  }
-  100% {
-    box-shadow: 0 0 0 22px rgba(63, 125, 82, 0);
-  }
-}
-
-.completion-card.completed {
-  animation:
-    card-rise 480ms cubic-bezier(0.16, 1, 0.3, 1),
-    success-glow 1.4s ease-out 200ms 2;
 }
 
 .completion-card div {
@@ -1554,10 +1496,17 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .completion-card,
+  .completion-card {
+    grid-template-columns: 1fr;
+  }
+
   .facts-grid,
   .meta-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .status-badge {
+    justify-self: start;
   }
 
   .completion-card a {
@@ -1565,18 +1514,30 @@ th {
   }
 }
 
+/* Fingers need a full 44px target; mouse users keep the denser controls. */
+@media (pointer: coarse) {
+  .rail-toggle,
+  .runs-dock > button,
+  .segmented button,
+  .mini-toggle button,
+  .log-card button,
+  .text-button,
+  .source-link,
+  .back-link,
+  .run-row a {
+    min-height: 44px;
+  }
+
+  .run-row a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+}
+
 /* Motion is additive: base states are already correct with zero animation,
    so reduced-motion users lose only the enhancement, never information. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes map-nodes-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
   @keyframes panel-in {
     from {
       opacity: 0;
@@ -1594,7 +1555,7 @@ th {
     }
   }
 
-  @keyframes dot-pulse {
+  @keyframes run-pulse {
     to {
       box-shadow: 0 0 0 6px rgba(165, 130, 74, 0);
     }
@@ -1626,16 +1587,28 @@ th {
     animation: stage-icon-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* celebratory flash when a run lands */
+  @keyframes success-glow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(63, 125, 82, 0.45);
+    }
+    100% {
+      box-shadow: 0 0 0 18px rgba(63, 125, 82, 0);
+    }
+  }
+
   .completion-card {
     animation: completion-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  .run-dot.running {
-    animation: dot-pulse 1.6s ease-out infinite;
+  .completion-card.completed {
+    animation:
+      completion-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both,
+      success-glow 1.4s ease-out 200ms;
   }
 
-  .map-nodes {
-    animation: map-nodes-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  .run-dot.running {
+    animation: run-pulse 1.6s ease-out infinite;
   }
 
   .detail-panel {
@@ -1651,17 +1624,6 @@ th {
   .segmented .indicator,
   .mini-toggle .indicator {
     transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .map-dot {
-    transition: opacity 160ms ease, r 160ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1), fill 300ms ease;
-    /* pause ambient drift on hover so the scale-up feels deliberate */
-    animation-play-state: paused;
-  }
-
-  .map-dot:hover {
-    animation: none;
-    transform: scale(1.6);
   }
 
   /* A picked dataset swings the chart's needle toward it, fast at first and

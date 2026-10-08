@@ -493,7 +493,10 @@ export default function Home() {
                 <span className="agency-dot" aria-hidden="true" style={{ background: nodeColor(item) }} />
                 <b>{item.name}</b>
                 <small>
-                  {item.agency || 'Unknown'} &nbsp;•&nbsp; {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
+                  <span className="result-agency">{item.agency || 'Unknown'}</span>
+                  <span className="result-fit">
+                    <span aria-hidden="true">•</span> {toneLabel(suitabilityLookup[item.dataset_id], item.suitability_score, item.suitability_tone)}
+                  </span>
                 </small>
               </button>
             ))}
@@ -530,15 +533,19 @@ export default function Home() {
               </svg>
             </a>
           )}
-          <div className="meta-grid">
+          <div className={`meta-grid${detailLoading ? ' is-loading' : ''}`}>
             <span>Rows</span>
-            <b>{info?.row_count_total?.toLocaleString() ?? 'Unknown'}</b>
+            <b>{info?.row_count_total?.toLocaleString() ?? (detailLoading ? '…' : 'Unknown')}</b>
             <span>Columns</span>
-            <b>{info?.column_count ?? 'Unknown'}</b>
+            <b>{info?.column_count ?? (detailLoading ? '…' : 'Unknown')}</b>
             <span>Updated</span>
-            <b>{info?.last_updated || selected.last_updated_at || 'Unknown'}</b>
+            <b>{info?.last_updated || selected.last_updated_at || (detailLoading ? '…' : 'Unknown')}</b>
             <span>Coverage</span>
-            <b>{info?.coverage_start || selected.coverage_start || 'NA'} to {info?.coverage_end || selected.coverage_end || 'NA'}</b>
+            <b>
+              {detailLoading && !selected.coverage_start
+                ? '…'
+                : `${info?.coverage_start || selected.coverage_start || 'NA'} to ${info?.coverage_end || selected.coverage_end || 'NA'}`}
+            </b>
           </div>
           {fit?.reasons?.length ? (
             <ul className="reason-list">

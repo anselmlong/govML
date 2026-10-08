@@ -41,6 +41,11 @@ function MapCanvas(
   const movedRef = useRef(false);
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const hoverIdRef = useRef<string | null>(null);
+  // reduced motion: no drift, no entrance fade; repaint only when something changes
+  const staticRef = useRef(false);
+  const redrawRef = useRef<() => void>(() => undefined);
+  // when the current pick was made, for its one-off sounding rings
+  const pickRef = useRef<{ id?: string; at: number }>({ at: 0 });
   const [tooltip, setTooltip] = useState<{ name: string; agency: string; x: number; y: number } | null>(null);
 
   // keep latest props reachable from the rAF loop without resubscribing zoom
@@ -70,7 +75,11 @@ function MapCanvas(
   const fitTransform = useCallback((): ZoomTransform => {
     const canvas = canvasRef.current;
     if (!canvas) return zoomIdentity;
-    const k = Math.min(canvas.clientWidth / DESIGN_W, canvas.clientHeight / DESIGN_H);
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    // a strict contain-fit leaves a thin strip of dots on a tall phone screen;
+    // there, trade the sparse outer edges (still a pan away) for legible clusters
+    const k = H > W ? Math.min(H / DESIGN_H, (W / DESIGN_W) * 1.5) : Math.min(W / DESIGN_W, H / DESIGN_H);
     return zoomIdentity.translate(
       (canvas.clientWidth - DESIGN_W * k) / 2,
       (canvas.clientHeight - DESIGN_H * k) / 2
@@ -103,8 +112,12 @@ function MapCanvas(
       const cs = getComputedStyle(canvas);
       const bearing = cs.getPropertyValue('--bearing').trim() || '#2f6e7f';
       const depth = cs.getPropertyValue('--depth').trim() || '#333';
-      const t = time * 0.001; // seconds
+      const still = staticRef.current;
+      const t = still ? 0 : time * 0.001; // seconds
       const elapsed = (time - mountRef.current) * 0.001;
+      if (pickRef.current.id !== sel) pickRef.current = { id: sel, at: time };
+      let pickX = NaN;
+      let pickY = NaN;
 
       for (let i = 0; i < n.length; i++) {
         const node = n[i];
@@ -122,6 +135,10 @@ function MapCanvas(
         const oy = Math.cos(t * w * 0.83 + phi * 1.7) * amp;
         const cx = node.x * 940 + 30 + ox;
         const cy = node.y * 640 + 30 + oy;
+        if (active) {
+          pickX = cx;
+          pickY = cy;
+        }
 
         // gentle size breathing
         let r = (isMatched ? 3.2 : 2.2) * (1 + 0.14 * Math.sin(t * w * 1.3 + phi * 2.1));
@@ -132,7 +149,7 @@ function MapCanvas(
         // opacity semantics preserved from the SVG version
         let alpha = filtered ? 0.08 : isMatched || active || !hasResults ? 0.86 : 0.24;
         // entrance cascade over the first ~1.6s after mount
-        const appear = Math.min(1, Math.max(0, (elapsed - (ph ? ph.stag * 0.9 : 0)) / 0.5));
+        const appear = still ? 1 : Math.min(1, Math.max(0, (elapsed - (ph ? ph.stag * 0.9 : 0)) / 0.5));
         alpha *= appear;
 
         if (alpha <= 0.01) continue;
@@ -152,6 +169,23 @@ function MapCanvas(
         }
       }
 
+      // Sounding: a picked dataset sends out two widening rings, like a depth
+      // sounding marked on a chart, so the eye lands on it after the fly-in.
+      const since = time - pickRef.current.at;
+      if (Number.isFinite(pickX) && !still && since < 1700) {
+        ctx.strokeStyle = bearing;
+        ctx.lineWidth = 1.5 / tf.k;
+        for (const delay of [320, 620]) {
+          const p = (since - delay) / 1000;
+          if (p <= 0 || p >= 1) continue;
+          const eased = 1 - Math.pow(1 - p, 3);
+          ctx.globalAlpha = 0.8 * (1 - p);
+          ctx.beginPath();
+          ctx.arc(pickX, pickY, (6 + 34 * eased) / tf.k, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
       ctx.globalAlpha = 1;
     },
     [phases]
@@ -165,27 +199,36 @@ function MapCanvas(
     tfRef.current = fitTransform();
 
     const behavior = zoom<HTMLCanvasElement, unknown>()
-      .scaleExtent([0.6, 22])
+      .scaleExtent([0.5, 22])
       .translateExtent([
         [0, 0],
         [DESIGN_W, DESIGN_H]
       ])
-      .on('start', () => {
-        movedRef.current = true;
+      .on('start', (event) => {
+        // only a person dragging or zooming counts; programmatic fits don't
+        if (event.sourceEvent) movedRef.current = true;
         canvas.style.cursor = 'grabbing';
       })
       .on('zoom', (event) => {
         tfRef.current = event.transform;
+        redrawRef.current();
       })
       .on('end', () => {
         canvas.style.cursor = hoverIdRef.current ? "pointer" : "grab";
       });
     select(canvas).call(behavior).on('dblclick.zoom', null);
     behaviorRef.current = behavior;
+    // seed d3 with the fitted view, or the first drag snaps back to identity
+    select(canvas).call(behavior.transform, tfRef.current);
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    staticRef.current = reduceMotion;
     let raf = 0;
     if (reduceMotion) {
+      redrawRef.current = () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(draw);
+      };
       draw(performance.now());
     } else {
       const loop = (t: number) => {
@@ -196,18 +239,24 @@ function MapCanvas(
     }
 
     const ro = new ResizeObserver(() => {
-      if (!movedRef.current) tfRef.current = fitTransform();
+      if (!movedRef.current) select(canvas).call(behavior.transform, fitTransform());
       if (reduceMotion) draw(performance.now());
     });
     ro.observe(canvas);
 
     return () => {
       cancelAnimationFrame(raf);
+      redrawRef.current = () => undefined;
       ro.disconnect();
       select(canvas).on('.zoom', null);
       behaviorRef.current = null;
     };
   }, [draw, fitTransform]);
+
+  // the animated loop picks up prop changes on its own; a still map must be told
+  useEffect(() => {
+    redrawRef.current();
+  }, [nodes, colorFor, agencyFilter, selectedId, matchedIds, hasResults]);
 
   // hover cursor + suppression of click-after-drag
   useEffect(() => {
@@ -241,6 +290,7 @@ function MapCanvas(
     const onMove = (event: PointerEvent) => {
       const { x, y } = toUser(event.clientX, event.clientY);
       const hit = pick(x, y);
+      if ((hit?.dataset_id ?? null) !== hoverIdRef.current) redrawRef.current();
       hoverIdRef.current = hit?.dataset_id ?? null;
       canvas.style.cursor = hit ? 'pointer' : 'grab';
       if (hit) {
