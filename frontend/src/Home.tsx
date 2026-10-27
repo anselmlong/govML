@@ -319,6 +319,9 @@ export default function Home() {
           </span>
         </a>
         <div className="nav-actions">
+          <a className="attribution-link" href="https://ko-fi.com/anselmlong" target="_blank" rel="noopener">
+            ☕ Ko-fi
+          </a>
           <a className="attribution-link" href="https://data.gov.sg" target="_blank" rel="noreferrer">
             Data from data.gov.sg
             <svg className="ext-arrow" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
