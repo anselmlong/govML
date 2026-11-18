@@ -40,7 +40,8 @@ class Config:
     q: float = 0.05
     min_abs_r: float = 0.3
     dup_corr: float = 0.98
-    covid_years: tuple[int, int] = (2020, 2021)
+    covid_years: tuple[int, int] = (2020, 2022)
+    min_stability: float = 0.5
     trim: float = 0.15
     break_crit: float = 12.16
     min_break_points: int = 20
@@ -427,9 +428,11 @@ def find(series: list[Series], names: dict[str, str], cfg: Config = Config()) ->
                 status.append("rule4_sign")
             elif abs(r.r_test) < cfg.min_abs_r:
                 status.append("rule4_min_r")
+            elif abs(r.r_train) < cfg.min_stability * abs(r.r_test):
+                status.append("rule4_episode")
             elif not (_passes(r.r_test_spearman, r.r_train, r.p_spearman, cut, cfg)
-                      or (np.sign(r.r_train_ex_covid) == np.sign(r.r_train)
-                          and _passes(r.r_ex_covid, r.r_train, r.p_ex_covid, cut, cfg))):
+                      and np.sign(r.r_train_ex_covid) == np.sign(r.r_train)
+                      and _passes(r.r_ex_covid, r.r_train, r.p_ex_covid, cut, cfg)):
                 status.append("rule5_covid")
             else:
                 status.append("survived")
@@ -453,6 +456,10 @@ def find(series: list[Series], names: dict[str, str], cfg: Config = Config()) ->
         cands["name_overlap"] = [name_overlap(names.get(by_id[x].dataset_id, x), names.get(by_id[y].dataset_id, y)) for x, y in zip(cands["x"], cands["y"])]
         cands["score"] = cands["r_test"].abs() * (1 - cands["name_overlap"]) * np.minimum(1, cands["n_test"] / 20)
         cands = cands.sort_values(["score", "x", "y", "lag"], ascending=[False, True, True, True], kind="stable")
+        pair_key = [tuple(sorted((by_id[x].dataset_id, by_id[y].dataset_id))) for x, y in zip(cands["x"], cands["y"])]
+        repeat = pd.Series(pair_key, index=cands.index).duplicated()
+        killed["rule6_same_dataset_pair"] += int(repeat.sum())
+        cands = cands[~repeat]
     cands = cands.reindex(columns=CANDIDATE_COLUMNS).reset_index(drop=True)
 
     report["killed"] = dict(sorted(killed.items()))
