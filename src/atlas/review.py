@@ -18,6 +18,7 @@ import json
 import math
 import os
 import re
+import sqlite3
 import sys
 import time
 from dataclasses import dataclass, field
@@ -388,6 +389,17 @@ class Result:
     usage: Usage
 
 
+def load_dataset_names(store: Path, catalog: Path = Path("catalog.db")) -> dict[str, str]:
+    """`<store>/dataset_names.json` when present, else the catalog's names, else none."""
+    names_file = store / "dataset_names.json"
+    if names_file.exists():
+        return json.loads(names_file.read_text())
+    if catalog.exists():
+        with sqlite3.connect(catalog) as conn:
+            return dict(conn.execute("SELECT dataset_id, name FROM datasets"))
+    return {}
+
+
 def review(store: Path, client: Client | None, model: str, top: int = 60, dry_run: bool = False,
            log: Callable[[str], None] = print) -> Result | None:
     cands = _read_table(store, "candidates").sort_values("score", ascending=False).head(top)
@@ -396,8 +408,7 @@ def review(store: Path, client: Client | None, model: str, top: int = 60, dry_ru
     breaks = _read_table(store, "breaks", required=False)
     metas = {r["series_id"]: r for r in meta.to_dict("records")}
     points = {sid: dict(zip(g["period"], g["value"])) for sid, g in pts_df.sort_values("period").groupby("series_id")}
-    names_file = store / "dataset_names.json"
-    dataset_names = json.loads(names_file.read_text()) if names_file.exists() else {}
+    dataset_names = load_dataset_names(store)
     records = _records(cands)
 
     if dry_run:
