@@ -29,7 +29,7 @@ import pandas as pd
 import requests
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
+DEFAULT_MODEL = "anthropic/claude-sonnet-5.5"
 EXCERPT_POINTS = 24
 BREAK_WINDOW = 8
 TOP_BREAKS = 12
