@@ -72,6 +72,10 @@ Pairs found inside the theme slice gave no finding. Pairs across the whole catal
   rental transactions against aircraft arrivals, at a lag of 3 months. The reviewer drops it.
 - New rules drop a pair whose test correlation is more than double its training correlation (one
   episode, not a stable link), and keep one candidate per pair of datasets.
+- After this run, a verifier found the records detector treating a few per-category tables as event
+  records, so the detector was tightened. A rebuild matches 1,052 tables rather than 1,053; the
+  stores reported below predate the fix. The only affected tables are short annual and quarterly
+  ones, which are never paired.
 - The reviewer must give a rationale for every verdict, and the default model is now Sonnet 5.5.
   Haiku also dropped every theme candidate, but gave no reasons.
 
