@@ -48,7 +48,10 @@ Code lives in `src/atlas/`. Run `python -m src.atlas.flip --all` (or `--datasets
 - **Units** are read from the row label (`(Million Dollars)`), the value column name (`MillionDollars`),
   or an index base in the dataset name (`(2017 = 100)`). Otherwise `None`.
 - **Series shorter than 3 points** are skipped and counted.
-- **Cache cap.** Tables that hit the 10,000-row cache cap are flagged in the report as possibly truncated.
+- **Cache files.** One file per dataset: the uncapped `_all` if present, else the largest `_<cap>`.
+  Files left over are listed in `coverage.json`. A file at its row cap is flagged as possibly truncated.
+- **IDs and row order.** A `section` dim or `n` suffix appears only when labels repeat, so inserting a
+  row into such a table can rename series that share its label. Known limit on "stable across weekly runs".
 
 ## Phases
 

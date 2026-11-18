@@ -24,7 +24,10 @@ MIN_POINTS = 3
 ID_COLUMNS = {"vault_id", "_id"}
 MIN_PERIOD_COLUMNS = 3
 MIN_PERIOD_SHARE = 0.5
-TIME_NAMES = {"year", "financial_year", "fy", "yr", "month", "quarter", "qtr", "period", "date", "half"}
+TIME_NAMES = {
+    "year", "financial_year", "fy", "yr", "month", "quarter", "qtr", "period", "date", "half",
+    "calendar_year", "academic_year", "year_of_assessment", "year_of_balance", "shs_year",
+}
 MONTH_NUMBER_NAMES = {"mth", "month", "mon"}
 TIMESTAMP_NAMES = {"timestamp", "update_timestamp", "datetime", "date_time"}
 NOT_A_MEASURE = re.compile(r"(^|_)(id|code|postal|lat|lng|lon|long|latitude|longitude|age|rank)($|_)")

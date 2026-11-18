@@ -144,3 +144,8 @@ def test_unit_records_are_unmatched_not_half_read():
 def test_tables_no_reader_can_use_say_why(data, reason):
     r = flip(table(data))
     assert isinstance(r, Unmatched) and r.reason == reason and r.dataset_id == "d_test"
+
+
+def test_named_year_columns_are_time_axes():
+    r = flip(table({"year_of_assessment": ["2008", "2009", "2010"], "taxable": ["1", "2", "3"]}))
+    assert isinstance(r, Matched) and r.series[0].freq == "A"

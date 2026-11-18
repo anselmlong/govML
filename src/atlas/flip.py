@@ -19,7 +19,6 @@ import pandas as pd
 from .readers import Matched, Table, Unmatched, flip
 from .store import write_store
 
-CACHE_ROWS = 10_000
 DEFAULT_OUT = Path("atlas")
 
 
@@ -30,16 +29,26 @@ def dataset_names(catalog: Path) -> dict[str, str]:
         return dict(conn.execute("SELECT dataset_id, name FROM datasets"))
 
 
-def cached_ids(cache_dir: Path) -> list[str]:
-    suffix = f"_{CACHE_ROWS}.parquet"
-    return sorted(p.name[: -len(suffix)] for p in cache_dir.glob(f"*{suffix}"))
+def cache_files(cache_dir: Path) -> dict[str, list[tuple[int | None, Path]]]:
+    """Every parquet in the cache by dataset id, best first: the uncapped `_all` file, then
+    the largest row cap. `_<cap>` is the `max_rows` the file was fetched with."""
+    found: dict[str, list[tuple[int | None, Path]]] = {}
+    for path in cache_dir.glob("d_*_*.parquet"):
+        dataset_id, _, key = path.stem.rpartition("_")
+        found.setdefault(dataset_id, []).append((None if key == "all" else int(key), path))
+    return {d: sorted(files, key=lambda f: (f[0] is not None, -(f[0] or 0))) for d, files in sorted(found.items())}
 
 
-def flip_cache(ids: list[str], cache_dir: Path, names: dict[str, str]) -> Iterator[tuple[Matched | Unmatched, bool]]:
-    """Yield `(result, truncated)` per dataset. `truncated` marks a cache file that hit the
+def flip_cache(
+    ids: list[str], files: dict[str, list[tuple[int | None, Path]]], names: dict[str, str]
+) -> Iterator[tuple[Matched | Unmatched, bool]]:
+    """Yield `(result, truncated)` per dataset. `truncated` marks a cache file that hit its
     row cap, so long tables in it may be missing their later rows."""
     for dataset_id in ids:
-        path = cache_dir / f"{dataset_id}_{CACHE_ROWS}.parquet"
+        if dataset_id not in files:
+            yield Unmatched(dataset_id, "not_in_cache"), False
+            continue
+        cap, path = files[dataset_id][0]
         try:
             frame = pd.read_parquet(path)
         except Exception as exc:
@@ -50,10 +59,12 @@ def flip_cache(ids: list[str], cache_dir: Path, names: dict[str, str]) -> Iterat
             result = flip(table)
         except Exception as exc:
             result = Unmatched(dataset_id, "reader_error", f"{type(exc).__name__}: {exc}")
-        yield result, len(frame) >= CACHE_ROWS
+        yield result, cap is not None and len(frame) >= cap
 
 
-def build_report(results: list[tuple[Matched | Unmatched, bool]], names: dict[str, str]) -> dict:
+def build_report(
+    results: list[tuple[Matched | Unmatched, bool]], names: dict[str, str], shadowed: list[str]
+) -> dict:
     matched = [(r, t) for r, t in results if isinstance(r, Matched)]
     unmatched = [r for r, _ in results if isinstance(r, Unmatched)]
     series = [s for r, _ in matched for s in r.series]
@@ -74,6 +85,7 @@ def build_report(results: list[tuple[Matched | Unmatched, bool]], names: dict[st
         "points": sum(len(s.points) for s in series),
         "candidate_series_skipped": dict(skipped),
         "matched_tables_possibly_truncated": sum(t for _, t in matched),
+        "cache_files_not_flipped": shadowed,
         "unmatched": [
             {"dataset_id": u.dataset_id, "name": names.get(u.dataset_id, ""), "reason": u.reason, "detail": u.detail}
             for u in unmatched
@@ -95,8 +107,10 @@ def render_markdown(report: dict) -> str:
         f"{report['series_with_unit']:,} series carry a unit.", "",
         "## Candidate series skipped inside matched tables", "",
         *(f"- {k}: {v:,}" for k, v in report["candidate_series_skipped"].items()), "",
-        f"{report['matched_tables_possibly_truncated']} matched tables hit the {CACHE_ROWS:,}-row cache cap "
-        "and may be missing later rows.", "",
+        f"{report['matched_tables_possibly_truncated']} matched tables hit their cache row cap "
+        "and may be missing later rows.",
+        f"{len(report['cache_files_not_flipped'])} cache files were not flipped because a better file of the "
+        "same dataset was (listed in coverage.json).", "",
     ]
     return "\n".join(lines)
 
@@ -111,11 +125,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
 
-    ids = cached_ids(args.cache_dir) if args.all else [d.strip() for d in args.datasets.split(",") if d.strip()]
+    files = cache_files(args.cache_dir)
+    ids = list(files) if args.all else [d.strip() for d in args.datasets.split(",") if d.strip()]
+    shadowed = sorted(p.name for d in ids for _, p in files.get(d, [])[1:])
     names = dataset_names(args.catalog)
-    results = list(flip_cache(ids, args.cache_dir, names))
+    results = list(flip_cache(ids, files, names))
     n_series, n_points = write_store((s for r, _ in results if isinstance(r, Matched) for s in r.series), args.out)
-    report = build_report(results, names)
+    report = build_report(results, names, shadowed)
     (args.out / "coverage.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     (args.out / "coverage.md").write_text(render_markdown(report), encoding="utf-8")
     print(render_markdown(report))
