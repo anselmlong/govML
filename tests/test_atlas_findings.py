@@ -146,3 +146,39 @@ def test_real_theme_subset_obeys_every_rule():
     assert (np.sign(c["r_train"]) == np.sign(c["r_test"])).all() and (c["lag"] >= 0).all()
     assert list(c["score"]) == sorted(c["score"], reverse=True)
     assert (f.breaks["supF"] >= cfg.break_crit).all() and f.breaks["series_id"].is_unique
+
+
+def test_a_link_that_only_appears_in_the_test_window_is_killed_as_an_episode():
+    rng = np.random.default_rng(7)
+    x = rng.normal(0, 0.01, 240)
+    coupling = np.where(np.arange(240) < 168, 0.25, 1.0)
+    y = coupling * x + rng.normal(0, 0.006, 240)
+    series = [monthly("d_alpha", x), monthly("d_beta", y)]
+    f = find(series, names_for(series))
+    (t,) = f.tested.itertuples()
+    assert t.p_test_adj < 0.05 and abs(t.r_train) < 0.5 * abs(t.r_test)
+    assert t.status == "rule4_episode" and f.candidates.empty
+
+
+def test_a_pair_linked_only_by_a_2022_shock_is_killed_now_that_the_gate_covers_2022():
+    rng = np.random.default_rng(4)
+    shock = np.zeros(159)
+    for year in (2020, 2022):
+        first = (year - 2011) * 12 + 3 - 9
+        shock[first], shock[first + 2] = -0.15, 0.15
+    series = [monthly(f"d_{k}", rng.normal(0, 0.01, 159) + shock, start=(2011, 10)) for k in "ab"]
+    f = find(series, names_for(series))
+    (t,) = f.tested.itertuples()
+    assert t.p_test_adj < 0.05, "the shock alone passes BH"
+    assert t.status == "rule5_covid" and f.candidates.empty
+
+
+def test_two_rows_of_one_table_linked_to_another_table_give_one_candidate():
+    rng = np.random.default_rng(9)
+    x = rng.normal(0, 0.01, 240)
+    a1 = monthly("d_alpha", x + rng.normal(0, 0.004, 240), label="Total")
+    a2 = monthly("d_alpha", x + rng.normal(0, 0.004, 240), label="Imports")
+    b = monthly("d_beta", x + rng.normal(0, 0.004, 240))
+    f = find([a1, a2, b], names_for([a1, b]))
+    assert len(f.candidates) == 1
+    assert f.report["killed"].get("rule6_same_dataset_pair") == 1

@@ -29,3 +29,16 @@ def test_report_shows_kept_dropped_and_annotated_breaks(tmp_path):
     assert "idea (verified): Tracker" in text
     assert "Y is \\| part of X." in text
     assert "| 2013Q1 | 40.0 | -1.20 | guess: Cooling measures. |" in text
+
+
+def test_an_archived_dropped_file_renders_as_an_appendix(tmp_path):
+    store = tmp_path / "store"
+    store.mkdir()
+    for name, body in {"coverage.json": {"matched_tables": 1, "tables": 1, "series": 1}}.items():
+        (store / name).write_text(json.dumps(body))
+    archived = tmp_path / "old.json"
+    archived.write_text(json.dumps([{**CAND, "drop_reason": "same_quantity", "rationale": "Same index."}]))
+    out = tmp_path / "report.md"
+    main(["--store", str(store), "--appendix", f"first rules={archived}", "--out", str(out)])
+    text = out.read_text()
+    assert "## Appendix: first rules" in text and "| same_quantity | Same index. |" in text

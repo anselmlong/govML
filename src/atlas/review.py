@@ -51,8 +51,8 @@ candidate pair you are given. Your job is to decide whether it is worth showing,
 
 The pair has already passed these statistical gates, so do not re-judge them from the excerpt: the lag was
 chosen on the earlier 70% of the data and held on the later 30% (r_test) after a multiple-testing correction
-(p_test_adj), using changes not levels with seasonality removed, and it still holds with 2020-2021 removed
-(r_ex_covid) or by rank (r_test_spearman). Your job is the judgment statistics cannot make: is this one
+(p_test_adj), using changes not levels with seasonality removed, and it still holds with 2020-2022 removed
+(r_ex_covid) and by rank (r_test_spearman). Your job is the judgment statistics cannot make: is this one
 quantity counted twice, an identity, something nobody would be surprised by, or an artefact of how the
 tables are built?
 

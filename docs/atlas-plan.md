@@ -132,15 +132,22 @@ Units vary between rows of one table, so the engine only ever works on changes, 
    periods are in train, and to test only when both are in test. p_test is a two-sided t test at
    n_eff = n_test / (1 + 2 Σ ρx(j) ρy(j)), with the autocorrelations taken from the train window
    up to lag n_train / 4 and n_eff clamped to [3, n_test]. BH runs at q 0.05. A candidate is kept
-   when p_test_adj < 0.05, r_train and r_test have the same sign, and |r_test| >= 0.3.
+   when p_test_adj < 0.05, r_train and r_test have the same sign, |r_test| >= 0.3, and
+   |r_train| >= 0.5 × |r_test| (otherwise it is killed as `rule4_episode`: one stretch of the later
+   data, not a stable link).
    *Deviation:* the family is the set of tested pairs, one p each. The spec says pairs × lag
    window, but the lag is chosen on train and never re-searched on test. The spec's own figure
    (F ≈ 35k from about 270 representatives) also counts pairs, not lags.
-5. **COVID gate.** The candidate must still pass on one of two variants: Spearman on test, or
-   Pearson with every point pair touching 2020-01..2021-12 (2020Q1..2021Q4) removed from both
+5. **COVID gate.** The candidate must still pass on both of two variants: Spearman on test, and
+   Pearson with every point pair touching 2020-01..2022-12 (2020Q1..2022Q4) removed from both
    windows. Passing means three things: the sign matches r_train (and r_train ex-COVID, for the
    second variant), |r| >= 0.3, and p at most the BH line q × D / F, where D is the number of
-   BH discoveries. Both numbers are stored.
+   BH discoveries. Both numbers are stored. *Changed after the first whole-catalog run:* the
+   first version accepted either variant and ended in 2021. With that version, COVID-recovery
+   pairs such as aircraft movements against property transactions survived.
+6a. **One per dataset pair.** After ranking, only the best candidate for each unordered pair of
+   datasets is kept (`rule6_same_dataset_pair`). Arrivals, departures and total from one table
+   otherwise repeat a finding three times.
 6. **Breaks.** These are descriptive. Each representative left after rule 2 gets a sup-F test,
    at any frequency, provided it has at least 20 transformed points. The test looks for one mean
    shift in the deseasoned changes, with 15% trimming and iid residual variance, against

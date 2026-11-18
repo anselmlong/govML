@@ -26,7 +26,15 @@ def _cell(text: str) -> str:
 def _stats(c: dict) -> str:
     lag = f"x leads by {c['lag']} {c['freq']}" if c["kind"] == "lead" else "same period"
     return (f"{lag}; r train {c['r_train']:+.2f}, r test {c['r_test']:+.2f} (n {c['n_test']}), "
-            f"ex-2020-22 {c['r_ex_covid']:+.2f}, BH p {c['p_test_adj']:.2g}; span {c['span']}")
+            f"ex-COVID {c['r_ex_covid']:+.2f}, BH p {c['p_test_adj']:.2g}; span {c['span']}")
+
+
+def dropped_table(dropped: list[dict]) -> list[str]:
+    out = ["| x | y | evidence | reason | reviewer's rationale |", "|---|---|---|---|---|"]
+    for d in dropped:
+        out.append(f"| {_cell(_short(d['x_label'], 70))} | {_cell(_short(d['y_label'], 70))} | {_cell(_stats(d))} "
+                   f"| {d['drop_reason']} | {_cell(d.get('rationale') or d.get('review_error', ''))} |")
+    return out
 
 
 def render_store(store: Path, top_breaks: int) -> list[str]:
@@ -57,11 +65,7 @@ def render_store(store: Path, top_breaks: int) -> list[str]:
             *(f"- idea ({i['kind']}): {i['title']}. {i['description']}" for i in f["ideas"]),
             f"- reviewer: {f.get('rationale', '')}", "",
         ]
-    out += ["### Reviewed and dropped", "",
-            "| x | y | evidence | reason | reviewer's rationale |", "|---|---|---|---|---|"]
-    for d in dropped:
-        out.append(f"| {_cell(_short(d['x_label'], 70))} | {_cell(_short(d['y_label'], 70))} | {_cell(_stats(d))} "
-                   f"| {d['drop_reason']} | {_cell(d.get('rationale') or d.get('review_error', ''))} |")
+    out += ["### Reviewed and dropped", "", *dropped_table(dropped)]
     out += ["", f"### Strongest breaks (top {top_breaks} by sup-F)", "",
             "| series | period | sup-F | shift (sd) | note |", "|---|---|---|---|---|"]
     for b in sorted(breaks, key=lambda b: -b["supF"])[:top_breaks]:
@@ -76,11 +80,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--store", type=Path, action="append", required=True)
     ap.add_argument("--intro", type=Path)
     ap.add_argument("--top-breaks", type=int, default=20)
+    ap.add_argument("--appendix", action="append", default=[], metavar="TITLE=DROPPED_JSON",
+                    help="an archived dropped.json from an earlier run, rendered after the stores")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
     lines = [args.intro.read_text(encoding="utf-8").rstrip(), ""] if args.intro else []
     for store in args.store:
         lines += render_store(store, args.top_breaks)
+    for item in args.appendix:
+        title, _, path = item.partition("=")
+        lines += [f"## Appendix: {title}", "", *dropped_table(_load(Path(path))), ""]
     args.out.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {args.out}")
     return 0
