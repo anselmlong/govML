@@ -74,3 +74,8 @@ def test_series_ids_are_stable_slugs():
     assert make_series_id("d_1", {}, "n") == "d_1:all:n"
     long_a, long_b = "word " * 40 + "alpha", "word " * 40 + "beta"
     assert make_series_id("d", {"k": long_a}) != make_series_id("d", {"k": long_b})
+
+
+def test_mon_yyyy_values_parse_as_monthly():
+    freq, periods = parse_time_values(pd.Series(["OCT-2017", "MAR-2018", "OCT-2017"]))
+    assert freq == "M" and list(periods) == ["2017-10", "2018-03", "2017-10"]

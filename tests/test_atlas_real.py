@@ -17,7 +17,7 @@ JOB_VACANCY = "d_01966fdb498fa7fa2863635e25539693"
 PRICE_INDEX_Q = "d_2692545ef4aefe779b8b0bcdf910dbfd"
 INPUT_OUTPUT = "d_da2c259cb79497c6b681e308515796dd"
 DAILY_FX = "d_046ff8d521a218d9178178cfbfc45c2c"
-HDB_RESALE = "d_ea9ed51da2787afaf8e51f827c304208"
+HDB_RESALE_2017 = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
 
 NAMES = {
     EXPORTS: "Merchandise Exports By Region/ Market, Monthly",
@@ -76,9 +76,21 @@ def test_daily_table_is_unmatched_as_sub_monthly():
     assert isinstance(result, Unmatched) and result.reason == "sub_monthly_time"
 
 
-def test_transaction_level_resale_table_is_unmatched_not_half_read():
-    result = flip(real(HDB_RESALE))
-    assert isinstance(result, Unmatched) and result.reason == "low_row_coverage"
+def test_transaction_level_resale_table_aggregates_to_monthly_medians_and_counts():
+    path = CACHE / f"{HDB_RESALE_2017}_all.parquet"
+    if not path.exists():
+        pytest.skip(f"{path.name} not in the local cache")
+    frame = pd.read_parquet(path)
+    result = flip(Table(HDB_RESALE_2017, "Resale flat prices", frame))
+    assert isinstance(result, Matched) and result.reader == "records"
+    by_id = {s.series_id: s for s in result.series}
+    count = by_id[f"{HDB_RESALE_2017}:all:count"]
+    assert sum(count.points.values()) == len(frame)
+    price = by_id[f"{HDB_RESALE_2017}:all:median-resale-price"]
+    jan = frame[frame["month"] == "2017-01"]["resale_price"].astype(float).median()
+    assert price.freq == "M" and price.points["2017-01"] == jan
+    assert any(s.dims == {"flat_type": "4 ROOM"} for s in result.series)
+    assert not any("block" in s.dims or "street_name" in s.dims for s in result.series)
 
 
 def test_cli_writes_a_store_that_reads_back_and_a_coverage_report(tmp_path):

@@ -1,6 +1,7 @@
 """Flip the fetch cache into the series store and write a coverage report.
 
     python -m src.atlas.flip --all
+    python -m src.atlas.flip --theme themes/housing_col.json
     python -m src.atlas.flip --datasets d_056a886a7c7f7fc87f0cd875f426a653,d_01966fdb498fa7fa2863635e25539693
 """
 
@@ -120,13 +121,19 @@ def main(argv: list[str] | None = None) -> int:
     which = ap.add_mutually_exclusive_group(required=True)
     which.add_argument("--all", action="store_true", help="flip every table in the cache")
     which.add_argument("--datasets", help="comma-separated dataset ids")
+    which.add_argument("--theme", type=Path, help="json object keyed by dataset id")
     ap.add_argument("--cache-dir", type=Path, default=Path("cache"))
     ap.add_argument("--catalog", type=Path, default=Path("catalog.db"))
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
 
     files = cache_files(args.cache_dir)
-    ids = list(files) if args.all else [d.strip() for d in args.datasets.split(",") if d.strip()]
+    if args.all:
+        ids = list(files)
+    elif args.theme:
+        ids = sorted(json.loads(args.theme.read_text(encoding="utf-8")))
+    else:
+        ids = [d.strip() for d in args.datasets.split(",") if d.strip()]
     shadowed = sorted(p.name for d in ids for _, p in files.get(d, [])[1:])
     names = dataset_names(args.catalog)
     results = list(flip_cache(ids, files, names))

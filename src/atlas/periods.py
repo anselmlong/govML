@@ -48,6 +48,21 @@ _VALUE_PATTERNS: tuple[tuple[Freq, re.Pattern[str]], ...] = (
 MATCH_SHARE = 0.95
 
 
+_MON_YYYY = re.compile(r"^([A-Za-z]{3})-(\d{4})$")
+
+
+def _month_names_to_numbers(s: pd.Series) -> pd.Series:
+    """`OCT-2017` (CEA transaction records) becomes `2017-10`; anything else is untouched."""
+    parts = s.str.extract(_MON_YYYY)
+    month = parts[0].str.lower().map(MONTHS)
+    ok = month.notna() & parts[1].notna()
+    if not ok.any():
+        return s
+    out = s.copy()
+    out[ok] = parts[1][ok] + "-" + month[ok].astype(int).map("{:02d}".format)
+    return out
+
+
 def parse_time_values(values: pd.Series) -> tuple[Freq, pd.Series] | None:
     """Parse a long-table time column. Returns the frequency and one canonical period per
     row (NA where a row does not parse), or None unless a single frequency explains at
@@ -55,7 +70,7 @@ def parse_time_values(values: pd.Series) -> tuple[Freq, pd.Series] | None:
     s = values.dropna().astype(str).str.strip()
     if s.empty:
         return None
-    full = values.astype("string").str.strip()
+    full = _month_names_to_numbers(values.astype("string").str.strip())
     for freq, pat in _VALUE_PATTERNS:
         parts = full.str.extract(pat)
         ok = parts.notna().all(axis=1)

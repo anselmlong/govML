@@ -27,10 +27,11 @@ MIN_PERIOD_SHARE = 0.5
 TIME_NAMES = {
     "year", "financial_year", "fy", "yr", "month", "quarter", "qtr", "period", "date", "half",
     "calendar_year", "academic_year", "year_of_assessment", "year_of_balance", "shs_year",
+    "rent_approval_date", "transaction_date",
 }
 MONTH_NUMBER_NAMES = {"mth", "month", "mon"}
 TIMESTAMP_NAMES = {"timestamp", "update_timestamp", "datetime", "date_time"}
-NOT_A_MEASURE = re.compile(r"(^|_)(id|code|postal|lat|lng|lon|long|latitude|longitude|age|rank)($|_)")
+NOT_A_MEASURE = re.compile(r"(^|_)(id|code|postal|lat|lng|lon|long|latitude|longitude|age|rank|date|district)($|_)")
 NUMERIC_SHARE = 0.9
 MIN_ROW_COVERAGE = 0.5
 
@@ -278,8 +279,87 @@ def read_long_time(table: Table) -> tuple[list[Series], Counter[str]]:
     return out, skipped
 
 
+# ---------------------------------------------------------------- records
+
+MIN_RECORD_ROWS = 2000
+RECORD_GROUP_SHARE = 0.3
+RECORD_REPEAT_SHARE = 0.05
+MAX_RECORD_DIM_VALUES = 40
+
+
+def _record_shape(df: pd.DataFrame):
+    found = find_time(df)
+    if found is None or len(df) < MIN_RECORD_ROWS:
+        return None
+    freq, periods, time_cols = found
+    rest = [c for c in _data_columns(df) if c not in time_cols]
+    measures = _measure_columns(df, rest)
+    dim_cols = [c for c in rest if c not in measures]
+    if not dim_cols:
+        return None
+    keys = df[dim_cols].astype("string").fillna("")
+    groups = keys.drop_duplicates().shape[0]
+    repeated = keys.assign(period=periods).duplicated(keep=False).mean()
+    if groups < RECORD_GROUP_SHARE * len(df) and repeated < RECORD_REPEAT_SHARE:
+        return None
+    return freq, periods, measures, dim_cols
+
+
+def detect_records(table: Table) -> bool:
+    """One row per event (a resale, a rental approval): either the full dim key is nearly
+    unique per row, or the same key repeats within a period, so no dim combination is a
+    series on its own."""
+    return _record_shape(table.frame) is not None
+
+
+def read_records(table: Table) -> tuple[list[Series], Counter[str]]:
+    """Aggregate events per period: a count, and the median of each measure, for the whole
+    table and for each single low-cardinality dim on its own (town, flat type). Crossing
+    dims is left out on purpose: cells get thin and the series count explodes."""
+    df = _row_order(table.frame).reset_index(drop=True)
+    freq, periods, measures, dim_cols = _record_shape(df)
+    small = [c for c in dim_cols if df[c].nunique(dropna=True) <= MAX_RECORD_DIM_VALUES]
+    work = pd.DataFrame({"period": periods})
+    for m in measures:
+        work[m] = to_number(df[m])
+    for c in small:
+        work[c] = df[c].astype("string").str.strip()
+    work = work[work["period"].notna()]
+    dataset_unit = unit_from_dataset_name(table.name)
+    out: list[Series] = []
+    skipped: Counter[str] = Counter()
+
+    def emit(frame: pd.DataFrame, dims: dict[str, str]) -> None:
+        g = frame.groupby("period", sort=True)
+        stats = {"count": g.size().astype(float)}
+        for m in measures:
+            stats[f"median_{m}"] = g[m].median()
+        for name, ser in stats.items():
+            ser = ser.dropna()
+            if len(ser) < MIN_POINTS:
+                skipped[SKIP_TOO_FEW_POINTS] += 1
+                continue
+            unit = "records" if name == "count" else (unit_from_text(name) or dataset_unit)
+            parts = list(dims.values()) + [name]
+            out.append(Series(
+                series_id=make_series_id(table.dataset_id, dims, name),
+                dataset_id=table.dataset_id,
+                label=f"{table.name}: {' / '.join(parts)}",
+                dims=dims, measure=name, unit=unit, freq=freq,
+                points={str(k): float(v) for k, v in ser.items()},
+            ))
+
+    emit(work, {})
+    for c in small:
+        for value, frame in work.groupby(c, sort=True):
+            if value:
+                emit(frame, {c: str(value)})
+    return out, skipped
+
+
 READERS: tuple[Reader, ...] = (
     Reader("wide_time", detect_wide_time, read_wide_time),
+    Reader("records", detect_records, read_records),
     Reader("long_time", detect_long_time, read_long_time),
 )
 

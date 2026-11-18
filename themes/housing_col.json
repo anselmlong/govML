@@ -1,0 +1,1322 @@
+{
+ "d_007b79018e47094e8cd62bf6f6d9ed8e": {
+  "name": "Cumulative HDB Commercial Properties Completed Since 1960",
+  "tag": "housing"
+ },
+ "d_01e3556fb916ca19a7e29fc39520fa78": {
+  "name": "Available And Vacant Private Residential Properties (End Of Period), Quarterly",
+  "tag": "housing"
+ },
+ "d_026bc267470b9d9f7f89bade471d6341": {
+  "name": "Domestic Supply Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_02aa4bb51bc674f3a2d0b9bb6911d934": {
+  "name": "Number of Resale Applications Registered by Flat Type",
+  "tag": "housing"
+ },
+ "d_055b6549444dedb341c50805d9682a41": {
+  "name": "Supply Of Private Residential Properties In The Pipeline By Development Status (End Of Period), Quarterly",
+  "tag": "housing"
+ },
+ "d_05e7c4eff69c7b14db4490604cff7579": {
+  "name": "Import Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_05fe3ec5da4aa8b7043f6f3e90b400cb": {
+  "name": "Nominal Change in Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_06d2fe53728d2d971f1a8beae3c882d9": {
+  "name": "Residential Units Under The Management Of Housing And Development Board, As At December, Annual",
+  "tag": "housing"
+ },
+ "d_07b1eeeb22efdf7faf5bd6a13667359d": {
+  "name": "Dwelling Units under HDB's Management, by Town and Flat Type",
+  "tag": "housing"
+ },
+ "d_084c5a0d2db8310ff3e2800ea15f326a": {
+  "name": "Resident Households by Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_0a6c6d71f6fa14e2d27e406f1d018439": {
+  "name": "HDB Resident Population by Geographical Distribution",
+  "tag": "housing"
+ },
+ "d_0c8aa26a461084bdf712976aae1d810a": {
+  "name": "Property Rental Index, Office In Central Region By Locality, (4th Quarter 1998 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_0dd518c5695d360dde80d3da58e97f04": {
+  "name": "Real Change in Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_104915d27dbc51a3188d570c2bd60426": {
+  "name": "Resident Households by Monthly Household Income and Type of Dwelling (Household Expenditure Survey 2002/03)",
+  "tag": "housing"
+ },
+ "d_115300b30ad253b0b38b5ecf24ef901f": {
+  "name": "Potable Water Tariff",
+  "tag": "cost_of_living"
+ },
+ "d_11af4cacfdd459f8712fb903b1639d98": {
+  "name": "Monthly Revalidation of COE",
+  "tag": "cost_of_living"
+ },
+ "d_1474a849533ce3f99e3fda8b2d2cd93e": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Type of Goods and Services (Detailed) and Income Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_149ac00a2734bb0a03867bbe2ec0e7b0": {
+  "name": "Rentals of Non-Landed Residential Buildings, Quarterly",
+  "tag": "housing"
+ },
+ "d_14f63e595975691e7c24a27ae4c07c79": {
+  "name": "HDB Resale Price Index (1Q2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_15a135ddad104b14b75c8692abef45d7": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_16920b4dc841715d676d363d7b175f04": {
+  "name": "Resident Households by Monthly Household Income and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_178b6963fe272f50dfd9ceb9411952f9": {
+  "name": "Average Annual Government Transfers Per Household Member Among Resident Households by Type of Dwelling (Household Income, Annual 2003-2025)",
+  "tag": "housing"
+ },
+ "d_17f5382f26140b1fdae0ba2ef6239d2f": {
+  "name": "HDB Property Information",
+  "tag": "housing"
+ },
+ "d_17f9ae663cc5ef1a0af9dc68e8a2f206": {
+  "name": "Import Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_19c79027c2e6be3c39d637151bd2188d": {
+  "name": "Executive Condominium Units Launched and Sold in the Quarter, Quarterly",
+  "tag": "housing"
+ },
+ "d_1a2ea5e9309802413f650aba1b103166": {
+  "name": "Average Number of Income Earners by Flat Type",
+  "tag": "housing"
+ },
+ "d_1a7823f3d31e7db4b426833833762bab": {
+  "name": "Private Residential Property Transactions in Outside Central Region, Quarterly",
+  "tag": "housing"
+ },
+ "d_1c5d8f9684c14ab840d451852fefb13f": {
+  "name": "Average Annual Government Taxes Per Household Member Among Resident Households by Type of Dwelling, 2003 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_1dc0ffa8e519eb9a069db01c8dab6bf0": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Deciles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_1de494582daed4f45288e97d5c0204ed": {
+  "name": "Working End-user connections delivered by type of property",
+  "tag": "housing"
+ },
+ "d_1e8826e938ff9334d358b9a8825b11d5": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_1f131d397e8ad8511e860c83d978ac09": {
+  "name": "Resident Households by Presence of Employed Person, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_1f57cbc6cc41d72fb1b96c7c266c2eaf": {
+  "name": "Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_20e2fa37d1c8c19357a3f888487ab9f4": {
+  "name": "Domestic Supply Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_2109ad1eafff52dab388f9bcd8148a35": {
+  "name": "Tax Rates for Property Tax",
+  "tag": "housing"
+ },
+ "d_211f01d80dce8bb0ed6fc5d42558f8d9": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Type of Goods and Services (Detailed) and Income Quintile (Household Expenditure Survey 2002/03)",
+  "tag": "cost_of_living"
+ },
+ "d_21d29d0fe86b444496f88a10e303a1d3": {
+  "name": "Resident Households by Monthly Household Employment Income (Excluding Employer CPF Contributions), 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_22094bf608253d36c0c63b52d852dd6e": {
+  "name": "d_22094bf608253d36c0c63b52d852dd6e",
+  "tag": "anchor"
+ },
+ "d_22925ddfcff9792e3ff9844bd0272d63": {
+  "name": "Average Monthly Household Income From Each Source Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_23000a00c52996c55106084ed0339566": {
+  "name": "Median Rent By Town And Flat Type",
+  "tag": "housing"
+ },
+ "d_23f946fa557947f93a8043bbef41dd09": {
+  "name": "HDB Carpark Information",
+  "tag": "housing"
+ },
+ "d_24756274e2c743f7267db34c5169db18": {
+  "name": "Nominal Change in Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_2657c8b576a51b7a944d22187001e8b1": {
+  "name": "Number of Sold and Rented HDB Social Communal Facilities",
+  "tag": "housing"
+ },
+ "d_265dbb6dd49338853882076ca5678124": {
+  "name": "Resident Households by Monthly Household Expenditure and Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_2692545ef4aefe779b8b0bcdf910dbfd": {
+  "name": "Domestic Supply Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_26bcaadd552d0b77bb13ea9c671bac6b": {
+  "name": "Average and Median Age of HDB Resident Population by Flat Type",
+  "tag": "housing"
+ },
+ "d_27af98d638a80103319cb7499c220fe6": {
+  "name": "Resale Transactions by Flat Type (based on registered cases)",
+  "tag": "housing"
+ },
+ "d_282f82aa112b0a1113c06f7a64b46cb9": {
+  "name": "Resident Households by Monthly Household Employment Income (Including Employer CPF Contributions) (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_28b999e22ae1e23caf80172227d23830": {
+  "name": "Available and Vacant Private Residential Properties, Annual",
+  "tag": "housing"
+ },
+ "d_2b32fe125528c2b264b72238341b7e6a": {
+  "name": "Average And Median Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_2c0cee49fae1ff6e3e8b30594ba52f0f": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Household Living Arrangement and Income Group (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_2c4e8a61d3e254ef0c672192b0731de0": {
+  "name": "Resident Households by Household Living Arrangement and Selected Characteristics (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_2c567a3149c5a920da8df7d235f27365": {
+  "name": "Domestic Supply Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_2c7355a6a13ffe768f1b725f7905b5f1": {
+  "name": "Average Monthly Household Income Among Resident Households by Household Living Arrangement and Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_2d2ca1bcac71713d2c02deca871ebe98": {
+  "name": "Outstanding Housing Loans for Owner-Occupied Property, Quarterly",
+  "tag": "housing"
+ },
+ "d_2d493bdcc1d9a44828b6e71cb095b88d": {
+  "name": "Price Range of HDB Flats Offered",
+  "tag": "housing"
+ },
+ "d_2d5ff9ea31397b66239f245f57751537": {
+  "name": "Resale Flat Prices (Based on Registration Date), From Mar 2012 to Dec 2014",
+  "tag": "housing"
+ },
+ "d_2e9f21f16c87aa94ed98556537f68c5b": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Deciles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_2f133d6dbac7607ec1a95c996130b0c8": {
+  "name": "Resident Households by Monthly Household Income and Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_2f2c29c3f821461f36c24c6c1dbbe059": {
+  "name": "Active cases of renting out of flat",
+  "tag": "housing"
+ },
+ "d_2f3a5cb449559c85fba20401d22b5fbe": {
+  "name": "Export Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_3056c9849db11c4fcf0d5ea6f648d60b": {
+  "name": "Average Annual Government Transfers And Taxes Per Household Member Among Resident Households (Household Income, Annual 2003-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_3057f9da16fbaac74da36c9952448268": {
+  "name": "Domestic Supply Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_307210f9b1557b86752229b499046726": {
+  "name": "Role and Relationship of HDB Resident Population with Owner or Registered Tenant",
+  "tag": "housing"
+ },
+ "d_34cea2e433a8cf475619eb4855477bfe": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Deciles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_3783d61c6ff1857294b49240bf653167": {
+  "name": "Average Annual Government Transfers And Taxes Per Household Member Among Resident Households, 2003 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_378818f5f6dd1c83a42b5c63b943b0bc": {
+  "name": "Services Producer Price Indices, By Index, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_37e46b203bb77387328d25882247d000": {
+  "name": "Rental Index Of Industrial Space, (4th Quarter 2012 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_37ff979fd327acc0df0f412a29ea352f": {
+  "name": "Average And Median Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_38070327ca83c81887289a5c09d3c545": {
+  "name": "Stamp Duty Assessed for Private Residential Properties",
+  "tag": "housing"
+ },
+ "d_38ec7e5cd735d597ab85765d2ef1a39b": {
+  "name": "Number of applications for HDB Loan Eligibility Letters",
+  "tag": "housing"
+ },
+ "d_38ed343cc32c3e0b6ebc43a6058e9860": {
+  "name": "Approval, Construction Commencement & Completion of Private Residential Properties, Annual",
+  "tag": "housing"
+ },
+ "d_39b50a429f09781b90c9d62a727dff57": {
+  "name": "Services Producer Price Indices, By Index, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_3b626812cc3ea5cafa20490bb996eb0b": {
+  "name": "Average and Median Size of HDB Households by Flat Type",
+  "tag": "housing"
+ },
+ "d_3d4d10386af09a3384645cf24806021f": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Household Living Arrangement and Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_3d6dab1e71a8176ae2155b161f9c6b70": {
+  "name": "Number of members withdrawn under housing schemes, Annual",
+  "tag": "housing"
+ },
+ "d_3de9c42642510559d0d00fe19c82c954": {
+  "name": "Resident Households by Presence of Employed Person (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_3eb8958a8106e7b4339c755a7d1655e9": {
+  "name": "Net Foreign Exchange Earnings From Exports (Supply, Use and Input-Output Tables 2013)",
+  "tag": "cost_of_living"
+ },
+ "d_40bcf053c1487f0baef85f2f50cef81e": {
+  "name": "Number of Residential Long-Term Care Facilities Sector Breakdown",
+  "tag": "housing"
+ },
+ "d_42010db3d76ac3f5871533fff1d725d6": {
+  "name": "Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_42cb05dd61cddf473a8ba82cd10c7e34": {
+  "name": "d_42cb05dd61cddf473a8ba82cd10c7e34",
+  "tag": "anchor"
+ },
+ "d_43f493c6c50d54243cc1eab0df142d6a": {
+  "name": "Resale Flat Prices (Based on Approval Date), 2000 - Feb 2012",
+  "tag": "housing"
+ },
+ "d_46b171b3cac6087225006d84cd019f99": {
+  "name": "Average Monthly Household Expenditure Per Household Member Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Goods and Services (Broad) and Expenditure Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_46c382ded9048e73ada7faf2b4ce47ba": {
+  "name": "Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Deciles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_472200f9806362db03be41b5068677e4": {
+  "name": "Average And Median Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_473f502212568e7cd7c55e699a998f1d": {
+  "name": "Gender Composition of HDB Resident Population Aged 15 Years and Above by Flat Type",
+  "tag": "housing"
+ },
+ "d_47a61cdd2eaeb76ad27761ef06608807": {
+  "name": "Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_481193b8ad80eec0527d34a8c58b3891": {
+  "name": "Average Number of Employed Persons Among Resident and Resident Employed Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_48143be392f1ed22f0700835212e5a60": {
+  "name": "Median Annual Value and Property Tax By Type of HDB",
+  "tag": "housing"
+ },
+ "d_49007d39c294b610fbd1a21ebf1415a0": {
+  "name": "Resident Households by Monthly Household Employment Income (Excluding Employer CPF Contributions) (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_495055a5228852a53cf0323e8dcfbaed": {
+  "name": "Number of Non-Residential Long-Term Care Facilities",
+  "tag": "housing"
+ },
+ "d_4b4ee36346b27fe35c529588900340b2": {
+  "name": "Demand for Rental and Sold Flats",
+  "tag": "housing"
+ },
+ "d_4b69ac0ff084e96f03197ad346248918": {
+  "name": "Completion Status of HDB Commercial Developments",
+  "tag": "housing"
+ },
+ "d_4b78b2faa9266a0aac594d7924fea155": {
+  "name": "Resident Households by Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions), 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_4c9f4d8a42fc36da5efa2e120739825c": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Household Living Arrangement and Income Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_4de801eb1d2fc9e045ecffa49a90a5b1": {
+  "name": "Resident Households by Monthly Household Expenditure and Income Quintile (Household Expenditure Survey 2002/03)",
+  "tag": "cost_of_living"
+ },
+ "d_4e647ed2a40f33b8c968b19f405289cc": {
+  "name": "Average Monthly Household Town Gas Consumption by Dwelling Type, 2005 to Jun 2021",
+  "tag": "housing"
+ },
+ "d_4e75c62689c9f6f95ed60c4ad680cb7a": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_50830e6a799ccfd00b1ed0a5294920d7": {
+  "name": "NEWater Tariff",
+  "tag": "cost_of_living"
+ },
+ "d_510bfce0ddc331e535938b6c3f170ea8": {
+  "name": "Number of Residential Long-Term Care Facilities",
+  "tag": "housing"
+ },
+ "d_51ba5ca9aaef2f2d930bd927c8dc4cc1": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_5232a4da63a47af020617483693d5195": {
+  "name": "Age of HDB Resident Population by Flat Type",
+  "tag": "housing"
+ },
+ "d_523d376ff1d501a338add925f3313fd1": {
+  "name": "Resident Occupational Wages by Industry, June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_52b76b834498c21f34a47a47c29ec140": {
+  "name": "Residential Long-Term Care Admissions",
+  "tag": "housing"
+ },
+ "d_5363b6c403ae9a7d91c387eae64c4fac": {
+  "name": "Residential Units Constructed And Sold By Housing And Development Board, Annual",
+  "tag": "housing"
+ },
+ "d_53f4640059b47ae7a2b95d7b837b5dd9": {
+  "name": "Resident Households by Monthly Household Expenditure and Income Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_56b0c7f6538be69f24956634d88d82e8": {
+  "name": "Rental Indices Of Non-Landed Private Residential Properties By Locality (1st Quarter 2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_5785799d63a9da091f4e0b456291eeb8": {
+  "name": "Private Residential Property Transactions in Rest of Central Region, Quarterly",
+  "tag": "housing"
+ },
+ "d_57b3aaf1a55e681a4a8066af1534f6af": {
+  "name": "Import Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_582672d2f972194786d01efe151892b7": {
+  "name": "Completion Status of HDB Residential Developments",
+  "tag": "housing"
+ },
+ "d_5bf3670fa576e73a5b994ccc68150069": {
+  "name": "Resident Households by Monthly Household Expenditure and Type of Dwelling (Household Expenditure Survey 2002/03)",
+  "tag": "housing"
+ },
+ "d_5d2a513a20f58239f8c449ea6c9b6ecd": {
+  "name": "Average Monthly Nominal Earnings Per Employee, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_5dee9e6d9e7e70ac199b158ba45f5abf": {
+  "name": "Resident Households by Monthly Household Income and Main Source of Household Income (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_5ebd3244cf4eb9b5226d159eed02ac3a": {
+  "name": "Average Monthly Household Income From Each Source Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_5fe5a4bb4a1ecc4d8a56a095832e2b24": {
+  "name": "d_5fe5a4bb4a1ecc4d8a56a095832e2b24",
+  "tag": "anchor"
+ },
+ "d_61eac3cdb086814af485dcc682b75ae9": {
+  "name": "Electricity Tariff, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_620ad30cf4aca7c1c25eb2eff9e4bedc": {
+  "name": "Property Price Index By Type (4th Quarter 1998 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_637f3e77afb830711651ad26e6477d86": {
+  "name": "Export Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_645d1d90130c8369104839d3716de6a4": {
+  "name": "Domestic Supply Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_647dabde09e726b9eeb75e4d9cd96699": {
+  "name": "Rental Index Of Residential Properties, (1st Quarter 2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_64f98475cef1e94300362cb400a50012": {
+  "name": "Changes In Average Monthly Nominal Earnings Per Employee, (Compared To The Same Period A Year Ago), Annual",
+  "tag": "cost_of_living"
+ },
+ "d_650c42ad53d69ad3f6f47f04c21616fb": {
+  "name": "Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_65613d416a08fe806357c698dbf4306c": {
+  "name": "Resident Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_65f5bf43d377db3939d93eb6f744d950": {
+  "name": "Price Indices Of Non-Landed Private Residential Properties By Locality (1st Quarter 2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_6639092559fd0ffdeaaadd91c259d106": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_668967b5fce80dc42255a3ac1671f97c": {
+  "name": "Household Size by Flat Type",
+  "tag": "housing"
+ },
+ "d_670c3c6cecbcd24e48034a3428bd306e": {
+  "name": "Resident Occupational Wages within each Major Occupational Group by Industry, June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_676bc7fa1d69de0e74c0ceb8897dcb10": {
+  "name": "Cumulative Industrial Properties Completed Since 1960",
+  "tag": "housing"
+ },
+ "d_67966e5fd5dce14cf9fa5f0bc5164faf": {
+  "name": "Number of Sold and Rented HDB Residential Units",
+  "tag": "housing"
+ },
+ "d_679ca7a5e70eac7441faffeb877f8230": {
+  "name": "Average Number of Employed Persons Among Resident and Resident Employed Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_68888b7a9f4934f5008f3369cae0d2fb": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_68a42f09f350881996d83f9cd73ab02f": {
+  "name": "List of Government Markets Hawker Centres",
+  "tag": "cost_of_living"
+ },
+ "d_6961d4bc056dadcca47e23127a3ac174": {
+  "name": "HDB Resident Population Annualised Growth Rate",
+  "tag": "housing"
+ },
+ "d_697b2ff8c060349260a2645fb36a9cf8": {
+  "name": "Cost of Tax Collection",
+  "tag": "cost_of_living"
+ },
+ "d_69b3380ad7e51aff3a7dcc84eba52b8a": {
+  "name": "COE Bidding Results / Prices",
+  "tag": "cost_of_living"
+ },
+ "d_6a71278e57a2fc468452f550c800fde0": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Income Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_6b6e9e8033e0a077b3208bfb7ba81e6b": {
+  "name": "Domestic Supply Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_6b78d625911483860e162288a4000a0c": {
+  "name": "d_6b78d625911483860e162288a4000a0c",
+  "tag": "anchor"
+ },
+ "d_6c58a523a05b55836f383fa2a68d332d": {
+  "name": "Residential Dwellings, Annual",
+  "tag": "housing"
+ },
+ "d_6c8c70ffa11110434d3fd6a4e2d67416": {
+  "name": "Number of Income Earners by Flat Type",
+  "tag": "housing"
+ },
+ "d_6da7566e90fd1138832e4e622eb49c5a": {
+  "name": "Average Monthly Household Income Among Resident Households by Household Living Arrangement and Income Quintile (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_6f287a0e35413557148e148e8e32ca31": {
+  "name": "Gender Composition of HDB Resident Population by Flat Type",
+  "tag": "housing"
+ },
+ "d_70824d34defde87d88faccc5d5b1c6ea": {
+  "name": "Uncompleted Private Residential Units Launched in the Quarter by Market Segment, Quarterly",
+  "tag": "housing"
+ },
+ "d_7100ebcfbec1f5ef0448fa0563218c90": {
+  "name": "Import Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_71ce745d4e4ea9cd2fea0fdf46412fc8": {
+  "name": "Annual Revalidation of Certificate of Entitlement (COE) of Existing Vehicles",
+  "tag": "cost_of_living"
+ },
+ "d_740bc018cfe20d3d6f6c53fe6a69fa6b": {
+  "name": "HDB Resident Population",
+  "tag": "housing"
+ },
+ "d_76ac49051fb05459b517a117dffa92ce": {
+  "name": "Average Monthly Household Expenditure Per Household Member Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Goods and Services (Broad) and Expenditure Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_774a81df45dca33112e59207e6dae1af": {
+  "name": "Median Annual Value and Property Tax By Type of Private Residential Property",
+  "tag": "housing"
+ },
+ "d_7875d532ad3307840a47163da0d7233b": {
+  "name": "Nominal Change in Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_78824270eced36ff2bd0d79999e79048": {
+  "name": "Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_78c7c1ec34c9f7552a9cfa51ac24ba9b": {
+  "name": "Change In Average And Median Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_799f173ec92a4c2622eda74fa7601e86": {
+  "name": "Real Change in Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_7a0847fef60362e46e59d0f844c938ba": {
+  "name": "Annual Motor Vehicle Population by Type of Fuel Used",
+  "tag": "cost_of_living"
+ },
+ "d_7a24e1f85969c45ad68a89f7acf4e7a8": {
+  "name": "Average Monthly Household Expenditure Among Resident Households By Type Of Goods And Services, Quinquennial",
+  "tag": "cost_of_living"
+ },
+ "d_7a882bd3d44374a7f701fc6a07620bf8": {
+  "name": "Supply of Private Residential Properties in the Pipeline by Development Status, Annually",
+  "tag": "housing"
+ },
+ "d_7a92f2b80605305f1866884e6e8f1286": {
+  "name": "Resident Households by Monthly Household Expenditure and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_7ad005fb69ffd08bc3a4a6edf498985b": {
+  "name": "Export Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_7c69c943d5f0d89d6a9a773d2b51f337": {
+  "name": "Private Residential Property Transactions in the Whole of Singapore, Quarterly",
+  "tag": "housing"
+ },
+ "d_7c8ba9b7bc466d7b8fc5500a2f3fdb12": {
+  "name": "Export Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_7cce20f5d2d8ae2582da809e66a1cdd7": {
+  "name": "Net amount withdrawn under housing schemes, Annual",
+  "tag": "housing"
+ },
+ "d_7d528712f1fd454ac6ca32fe06fe8f12": {
+  "name": "Resident Occupational Wages by Establishment Size, June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_7ec1e16178d7d13cfded6ced1a084759": {
+  "name": "Change In Average And Median Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_7f4f80f756b6e0878ca5357f47f64856": {
+  "name": "Change In Average And Median Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_832f3dbf5ffd55ed50cbd8fefa2c2e80": {
+  "name": "Resident Households by Monthly Household Expenditure and Household Size (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_83ff203724fe94184ae5c172f26942e0": {
+  "name": "HDB Fixed Rate Notes",
+  "tag": "housing"
+ },
+ "d_84d05d45049108f0fd2e99b66bd19cfe": {
+  "name": "Unsold Private Residential Units with Planning Approvals by Market Segment, Quarterly",
+  "tag": "housing"
+ },
+ "d_855146b45dc2087867ee712699830f65": {
+  "name": "Resident Households by Monthly Household Expenditure and Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_862c74b13138382b9f0c50c68d436b95": {
+  "name": "COMMERCIAL RENTAL INDEX (BASE QUARTER 1998-Q4 = 100), QUARTERLY",
+  "tag": "housing"
+ },
+ "d_874cb8683b003051794caaa0c2423ed5": {
+  "name": "Number of Licensed Hawkers Under Government Market and Hawker Centres, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_87af902bf55b56c1b9675b296f8731d4": {
+  "name": "Change In Average And Median Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_88430adbdecbccbad6d717ce81616a75": {
+  "name": "Change In Average And Median Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_88e252fe9febb6cf122a24f9193f1138": {
+  "name": "Registration of Documents Lodged for HDB Properties",
+  "tag": "housing"
+ },
+ "d_8948c3a188e1b054a32d984c94277b02": {
+  "name": "Net Foreign Exchange Earnings From Exports (Supply, Use and Input-Output Tables 2012)",
+  "tag": "cost_of_living"
+ },
+ "d_894e84243d69d55c13b357dbad4e6350": {
+  "name": "Number of Hawker Stalls Under Government Market and Hawker Centres, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_8a38111e8dfd6aa150ca1a877e080046": {
+  "name": "Real Change in Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_8a7a0a53262d53dc825f0d5ec0f5d8e5": {
+  "name": "Resident Households by Monthly Household Income and Type of Dwelling (Household Expenditure Survey 2007/08)",
+  "tag": "housing"
+ },
+ "d_8b84c4ee58e3cfc0ece0d773c8ca6abc": {
+  "name": "Resale flat prices based on registration date from Jan-2017 onwards",
+  "tag": "housing"
+ },
+ "d_8bd9b9872c7fcb456b7d2891a350be34": {
+  "name": "d_8bd9b9872c7fcb456b7d2891a350be34",
+  "tag": "anchor"
+ },
+ "d_8bf039f9577f326089bee6fc8d83c68a": {
+  "name": "Resident Households by Monthly Household Expenditure and Household Size (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_8cfe185ef2fab736b88629f6ed7fd9f2": {
+  "name": "Resident Households by Monthly Household Expenditure and Income Quintile (Household Expenditure Survey 2007/08)",
+  "tag": "cost_of_living"
+ },
+ "d_8d0811a153ff8a2cb8dd5d4e7a6e9e4b": {
+  "name": "Properties Under The Management Of Housing And Development Board (End Of Period), Annual",
+  "tag": "housing"
+ },
+ "d_8d661234bf4d92e8a53d9425d687d8c8": {
+  "name": "Average Monthly Household Online Expenditure Among Resident Households by Type of Goods and Services (Broad) and Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_8dab7137d98a54ca4d415deff73351bc": {
+  "name": "Export Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_8e115ca027751954fe8dd44203b6a9c9": {
+  "name": "Number of members under housing schemes as at end of quarter",
+  "tag": "housing"
+ },
+ "d_8e4c50283fb7052a391dfb746a05c853": {
+  "name": "Private Residential Property Rental Index , (Base Quarter 2009-Q1 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_8e63827487043dc6760a4b87216ba391": {
+  "name": "Domestic Supply Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_8ee5277cbd0e6428ac4cd324d136c221": {
+  "name": "Net amount withdrawn under housing schemes as at end of quarter",
+  "tag": "housing"
+ },
+ "d_8f024ddf2553d81ee00ede55b1d9b0ff": {
+  "name": "Median Gross Monthly Income From Employment (Including Employer CPF) Of Full-Time Employed Residents By Occupations And Sex, End June, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_913fd3cff8b7f462cf70cf415001e02b": {
+  "name": "Housing And Development Board (HDB) Resale Price Index (1Q2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_917a2a8bb57d96d48bafc3ab0baa2b6e": {
+  "name": "Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_91df44d6ec5075c9271d0fe7efdf65d0": {
+  "name": "Resident Households by Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_9259a7f2bd6ef9da23c2a2f2ca7c1b6a": {
+  "name": "Import Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_932549ba98a4b09b06474f33e49f8e39": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Monthly Household Expenditure (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_936bc5a29091b3e41e5a1a962588a653": {
+  "name": "Resident Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_94ae2d70cc4fb2a356f29a3a6ee65aea": {
+  "name": "Proportion Of Population With Large Household Expenditures On Health As A Share Of Total Household Expenditure, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_968496622a54acf5f67256434453b94c": {
+  "name": "Change In Average And Median Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_97f8a2e995022d311c6c68cfda6d034c": {
+  "name": "Private Residential Property Price Index (Base Quarter 2009-Q1 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_981440e44e569b36524e2b1b51e13fd0": {
+  "name": "Average Annual Government Taxes Per Household Member Among Resident Households by Type of Dwelling (Household Income, Annual 2003-2025)",
+  "tag": "housing"
+ },
+ "d_9834f6cdf1982e201c69c2bca45ad1c6": {
+  "name": "Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_986539e65706d7d1c3ee4fc47c403db3": {
+  "name": "Singapore Residents By Age Group And Type Of Dwelling, Annual",
+  "tag": "housing"
+ },
+ "d_986f584509f939f2fe2d1c48f19bcecc": {
+  "name": "Average Household Size Of Resident And Resident Employed Households By Type Of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_9917e751f7498502f70052a940a3f312": {
+  "name": "Resident Occupational Wages, June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_9b2ef6e21bad33e0072042643bbf0c6b": {
+  "name": "Export Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_9b4575f66f1143652e2b23519d6d6e7f": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Monthly Household Expenditure (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_9bbcd0c9b0351c7f41c9bfdcdc746668": {
+  "name": "Completion Status of HDB Residential Units by Town/Estate",
+  "tag": "housing"
+ },
+ "d_9c6271959306ec3d2726f1fc296794e8": {
+  "name": "Employed HDB Resident Population by Occupation and Sex",
+  "tag": "housing"
+ },
+ "d_9cd9c40f22a4e45cac8f8b9d895fd5ce": {
+  "name": "Median Gross Monthly Income From Employment of Full-Time Employed Residents (Total)",
+  "tag": "cost_of_living"
+ },
+ "d_9cda8217f5e480c2c789f0cb286ffa75": {
+  "name": "Resident Households by Monthly Household Expenditure and Household Size (Household Expenditure Survey 2002/03)",
+  "tag": "cost_of_living"
+ },
+ "d_9ed1deaf270bf5127a21725b8085af00": {
+  "name": "Nominal Change in Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_9f29a57db63c7a915e208f533f639aaa": {
+  "name": "Computer Access at Home by Housing Type",
+  "tag": "housing"
+ },
+ "d_a0a94216a4bb495fcd8682934ce85003": {
+  "name": "Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Deciles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_a10872f50ca31860109293d7ff064d11": {
+  "name": "Real Change in Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Employment Income, Annual 2000-2024)",
+  "tag": "housing"
+ },
+ "d_a158b4ee649c514d63b86162be7dee24": {
+  "name": "Domestic Supply Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_a20ad8fbc8f77e06fedab855695d67a7": {
+  "name": "Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_a223380e5856cf06f7eac223e5902230": {
+  "name": "CPF Housing Grants Awarded by Type",
+  "tag": "housing"
+ },
+ "d_a283de8cb3b4e80a228bf5f5e0bc4449": {
+  "name": "Completed Private Residential Units Sold in the Quarter, Quarterly",
+  "tag": "housing"
+ },
+ "d_a32043811ffb2e44c861fa24c4c425d1": {
+  "name": "Number of Sold and Rented HDB Commercial Properties",
+  "tag": "housing"
+ },
+ "d_a4229f9345138b80bde13cb1ad17a4e8": {
+  "name": "Resident Households by Monthly Household Employment Income (Including Employer CPF Contributions), 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_a52a3696c6c3fca75e6a82697142f3f0": {
+  "name": "Export Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_a5523e2bf61e9719aa328984493c8247": {
+  "name": "Average Monthly Household Online Expenditure Among Resident Households by Type of Goods and Services (Broad) and Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_a6c0ffc105817820388fd7b46fc67b13": {
+  "name": "Property Rental Index, Retail In Central Region By Locality, (4th Quarter 1998 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_a71dd26716f6aaf2d848bb49289edfb7": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_a7bbf918d0f2204f77e3e50f19af1188": {
+  "name": "Export Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_a9550b140c75968d401ff3a05e57233f": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Type of Goods and Services (Detailed) and Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_aa407dcd74f04648058a1fa8a57286a8": {
+  "name": "Resident Occupational Wages by Age and Establishment Size (Level 1), June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_aa75b9227b47cbc12ffe0e3be4979546": {
+  "name": "Median Gross Monthly Income From Employment of Full-Time Employed Residents by Sex",
+  "tag": "cost_of_living"
+ },
+ "d_ab4f7ecfc45e0a0eafe4ae4397e77059": {
+  "name": "Average And Median Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_afec94fe03eda8412bca467792e4f1a4": {
+  "name": "Average Monthly Household Expenditure Per Household Member Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Goods and Services (Broad) and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_b019b2a59996e9c7dd926898e16a7412": {
+  "name": "Distribution Of Monthly Household Expenditure By Type Of Goods And Services, Quinquennial",
+  "tag": "cost_of_living"
+ },
+ "d_b0d0ad4f0cc5f5084ad6d157e135f55a": {
+  "name": "Average Household Size Of Resident And Resident Employed Households By Type Of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_b1947886788f6d320e908872010029f4": {
+  "name": "Import Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_b2b7ffe00aaec3936ed379369fdf531b": {
+  "name": "d_b2b7ffe00aaec3936ed379369fdf531b",
+  "tag": "anchor"
+ },
+ "d_b37bc6f05c76337ad51aefddf0b7c888": {
+  "name": "Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Deciles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_b4b9c25fd6c5e48626bada6e2b517a8b": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Age Group of Main Income Earner and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_b51323a474ba789fb4cc3db58a3116d4": {
+  "name": "Median Resale Prices for Registered Applications by Town and Flat Type",
+  "tag": "housing"
+ },
+ "d_b62b0731b0283eb4d207651363ad38af": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_b672ba5cd181fd699e5463e03ca5f3d3": {
+  "name": "Issuance of Title Documents for Completed Private Properties",
+  "tag": "housing"
+ },
+ "d_b7c2e74824c179995d15d73eac845ba1": {
+  "name": "Consumer Price Indices (CPI)",
+  "tag": "cost_of_living"
+ },
+ "d_b876ece1b4a3bb5ebdc33c4394a236a2": {
+  "name": "Motor Vehicle Population Statistics by Type of Fuel Used",
+  "tag": "cost_of_living"
+ },
+ "d_ba30a057b9b164d1400e8bd039dd1cd3": {
+  "name": "Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_baa848bbdbf4af7b4d709f147fcf3c9b": {
+  "name": "Supply of Private Residential Properties in the Pipeline by Development Status, Quarterly",
+  "tag": "housing"
+ },
+ "d_bab2ba9ae53292abd526f4476bfa4de5": {
+  "name": "Industrial Water Tariff",
+  "tag": "cost_of_living"
+ },
+ "d_babdc4b2d2dd817021ed66d53555fc4c": {
+  "name": "Average Monthly Household Expenditure Per Household Member Among Resident Households Comprising Solely Non-Working Persons Aged 65 Years and Over by Type of Goods and Services (Broad) and Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_bb0bc88395e83f751d350fe4f9eccc1a": {
+  "name": "Average And Median Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_bbd44eba5187c6819bba03543b40408b": {
+  "name": "Change In Average And Median Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_bca4d02876096ed574ca17af078c1f5a": {
+  "name": "Registration of Documents Lodged for Private Properties",
+  "tag": "housing"
+ },
+ "d_bd2c823609a560cc74ca6d55862e6a40": {
+  "name": "Net Foreign Exchange Earnings From Exports (Supply, Use and Input-Output Tables 2014)",
+  "tag": "cost_of_living"
+ },
+ "d_bd83b4534db1032ca7415f82bbaae003": {
+  "name": "Basic Wage (Nominal) Changes by Industry",
+  "tag": "cost_of_living"
+ },
+ "d_bda4baa634dd1cc7a6c7cad5f19e2d68": {
+  "name": "Dates of Hawker Centres Closure",
+  "tag": "cost_of_living"
+ },
+ "d_bdaf94c98b004f897b11fc136f8301e8": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Household Living Arrangement and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_bdaff844e3ef89d39fceb962ff8f0791": {
+  "name": "Consumer Price Index (CPI), 2024 As Base Year, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_bdc3b0ce289a7f95309b82454cf2c366": {
+  "name": "Economically Active HDB Resident Population by Flat Type",
+  "tag": "housing"
+ },
+ "d_bdf68cd8cc16da40c273f865d939fecb": {
+  "name": "Median Gross Monthly Income From Employment of Full-Time Employed Residents by Age And Sex",
+  "tag": "cost_of_living"
+ },
+ "d_bef94bacc90528cdd00ba0dca7ffbef4": {
+  "name": "Cost of current holdings for CPFIS-OA as at end of quarter",
+  "tag": "cost_of_living"
+ },
+ "d_bf9f3e8c79c755dc96ba4b5667b1a7ec": {
+  "name": "Net Foreign Exchange Earnings From Exports (Supply, Use and Input-Output Tables 2010)",
+  "tag": "cost_of_living"
+ },
+ "d_c040090e33c36244606071f21b532af9": {
+  "name": "Average And Median Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident And Resident Employed Households (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_c0c26484c655113b0ab5abaa0a49952b": {
+  "name": "Private Residential Property Price Index By Type Of Property, (Base Quarter 2009-Q1 = 100)",
+  "tag": "housing"
+ },
+ "d_c1a7394aeb3a4265f1730ac09cd051d6": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_c1fb618152bf6a0d124d809660ba68e8": {
+  "name": "Resident Households by Household Living Arrangement and Selected Characteristics (Household Expenditure Survey 2012/13)",
+  "tag": "cost_of_living"
+ },
+ "d_c287c8be114bfa7d055b27ab2c87de83": {
+  "name": "Private Residential Property Transactions in Core Central Region, Quarterly",
+  "tag": "housing"
+ },
+ "d_c47771d51ac7d86ac300835b27848ff0": {
+  "name": "Applications registered for resale flats and rental flats",
+  "tag": "housing"
+ },
+ "d_c481389264b6032459ae728cc51423ce": {
+  "name": "Resident Households by Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions), 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_c49b6cc84ccab3a0523ad15a907e57be": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling (Household Income, Annual 2000-2025)",
+  "tag": "housing"
+ },
+ "d_c6edbb9c9c3ed1642a89e7515a6baca7": {
+  "name": "Age of HDB Resident Population by Geographical Distribution",
+  "tag": "housing"
+ },
+ "d_c74ebe613db891d25e4836aaf98d7a47": {
+  "name": "Average And Median Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_c8765a96efac975c1f1f4d3c90c4a1b8": {
+  "name": "Average Monthly Household Income Among Resident Households by Household Living Arrangement and Type of Dwelling (Household Expenditure Survey 2012/13)",
+  "tag": "housing"
+ },
+ "d_c92c69c95f6bcbf83c31e132eddc8997": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Age Group of Main Income Earner and Type of Dwelling (Household Expenditure Survey 2017/18)",
+  "tag": "housing"
+ },
+ "d_c9f57187485a850908655db0e8cfe651": {
+  "name": "Renting Out of Flats from Jan 2021",
+  "tag": "housing"
+ },
+ "d_caa8f8f91cb000f4b2c4a52fd22d516c": {
+  "name": "Cumulative Dwelling Units Completed Since 1960",
+  "tag": "housing"
+ },
+ "d_cb55223f678fb7702181fc95c587e03f": {
+  "name": "HDB Resident Population Aged 15 Years and Above by Flat Type",
+  "tag": "housing"
+ },
+ "d_ce5d8bb5c34f6b78b5b2f1fab09ccbce": {
+  "name": "Average Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_d045172681ff4d40b141bf080b89791a": {
+  "name": "Resident Households by Monthly Household Expenditure and Household Size (Household Expenditure Survey 2007/08)",
+  "tag": "cost_of_living"
+ },
+ "d_d0a04cbd237d58557fe7178781275e7f": {
+  "name": "Change In Average And Median Monthly Household Employment Income Per Household Member (Including Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_d1e7ac04e9e121c9bbced9cb4a7e91d5": {
+  "name": "Resident Occupational Wages by Sex, June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_d23a8c26d4a9530d651fbe0248a3f1fc": {
+  "name": "Available and Vacant Commercial Properties, Annually",
+  "tag": "housing"
+ },
+ "d_d2ea5ed23707597dca7b9c4fe6316724": {
+  "name": "Resident Households by Monthly Household Expenditure and Type of Dwelling (Household Expenditure Survey 2007/08)",
+  "tag": "housing"
+ },
+ "d_d40e2e889c0f84ac040dc108f2c20095": {
+  "name": "Resident Households by Monthly Household Income and Main Source of Household Income (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_d51d1f55834b6103671433e44a3cee5e": {
+  "name": "Import Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_d610f8ed1864daa6c7e790318bbc3323": {
+  "name": "Electricity Tariff, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_d7933d23e5fab92a086585cfb9224ba2": {
+  "name": "d_d7933d23e5fab92a086585cfb9224ba2",
+  "tag": "anchor"
+ },
+ "d_d7caa01b45aee232265aecd71a703be3": {
+  "name": "Occupancy Rate of State Properties",
+  "tag": "housing"
+ },
+ "d_da00b36ca8c831322fa0bb2a3378a476": {
+  "name": "Private Residential Property Price Index By Type Of Property, (1st Quarter 2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_dad4567fc02596774010f765567780e3": {
+  "name": "Renting Out of Flat Approvals by Flat Type, Quarterly",
+  "tag": "housing"
+ },
+ "d_db0e6e9b54364552dd9d2fc6a28f14f0": {
+  "name": "Resident Occupational Wages by Age and Establishment Size (Level 2), June 2024",
+  "tag": "cost_of_living"
+ },
+ "d_db18a290f392045e369a6036b9b949de": {
+  "name": "Average Annual Government Transfers Per Household Member Among Resident Households by Type of Dwelling, 2003 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_db69c88a1ff684356b8b38dc0e9b432c": {
+  "name": "HDB Households by Flat Type",
+  "tag": "housing"
+ },
+ "d_dce35e6697eadb9884f2e02af764e468": {
+  "name": "Price Index Of Industrial Space, (4th Quarter 2012 = 100), Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_dec34f3ed7daeb6429c8d8b7c36852d2": {
+  "name": "Annual Fuel Mix for Electricity Generation by Energy Products, 2005 to Jun 2021",
+  "tag": "cost_of_living"
+ },
+ "d_dff6b97b7c233917ac8294bd04051486": {
+  "name": "Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_e19935af41b8ba83c0966b89ebed4ad5": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Deciles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_e1c5b0df62729e69c82716355ef295ba": {
+  "name": "Uncompleted Private Residential Units Sold in the Quarter by Market Segment, Quarterly",
+  "tag": "housing"
+ },
+ "d_e31c9070e0b1363584683b81d984bfa7": {
+  "name": "Type of Family Nucleus by Flat Type",
+  "tag": "housing"
+ },
+ "d_e47c0f0674b46981c4994d5257de5be4": {
+  "name": "Supply Of Commercial And Industrial Properties In The Pipeline By Development Status, (Private And Public Sectors) (End Of Period), Quarterly",
+  "tag": "housing"
+ },
+ "d_e4aacd5e8591bed9fbdbe5550e2554bd": {
+  "name": "Average Monthly Household Expenditure Among Resident Households by Type of Goods and Services (Detailed) and Income Quintile (Household Expenditure Survey 2007/08)",
+  "tag": "cost_of_living"
+ },
+ "d_e4c066f1d3a7af2f17a32e53b1a1e9db": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Quarterly",
+  "tag": "cost_of_living"
+ },
+ "d_e5848828d6a14d35a8b7eea7e15a149e": {
+  "name": "Total Wage (Nominal) Changes by Industry",
+  "tag": "cost_of_living"
+ },
+ "d_e6079cb5bf0c2450372b1054f37e6e79": {
+  "name": "Bookings for New Flats",
+  "tag": "housing"
+ },
+ "d_e7db30312e09879c09e0fd9dbe093878": {
+  "name": "Import Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_e89cd21c636e5b7588b73cec0090de00": {
+  "name": "Breakdown by Use of SLA Managed Properties",
+  "tag": "housing"
+ },
+ "d_e8fb7c462d24dac06375c552a776988c": {
+  "name": "Total Household Town Gas Consumption by Dwelling Type, 2005 to Jun 2021",
+  "tag": "housing"
+ },
+ "d_e93c058371800bf3b708000ff47bc048": {
+  "name": "Number of Sold and Rented HDB Industrial Properties",
+  "tag": "housing"
+ },
+ "d_e96a2e27e7d3c35bb167068844ca0210": {
+  "name": "Annual Value and Property Tax By Property Type",
+  "tag": "housing"
+ },
+ "d_e9cc9d297b1cf8024cf99db4b12505cc": {
+  "name": "Available And Vacant Commercial And Industrial Properties (End Of Period), Quarterly",
+  "tag": "housing"
+ },
+ "d_e9d8d21437c90161601d9e84e93f8b63": {
+  "name": "Average Monthly Household Employment Income Per Household Member (Excluding Employer CPF Contributions) Among Resident Employed Households by Type of Dwelling, 2000 - 2025 (Household Income, Annual)",
+  "tag": "housing"
+ },
+ "d_e9e3d072d88817db1052876884168f01": {
+  "name": "Average Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident Employed Households by Deciles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ },
+ "d_ea9ed51da2787afaf8e51f827c304208": {
+  "name": "Resale Flat Prices (Based on Registration Date), From Jan 2015 to Dec 2016",
+  "tag": "housing"
+ },
+ "d_ebc5ab87086db484f88045b47411ebc5": {
+  "name": "Resale Flat Prices (Based on Approval Date), 1990 - 1999",
+  "tag": "housing"
+ },
+ "d_ebc7672e78cdc39874fa9a31af477b44": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_ec0244d088cfe409f328b65f3d74f964": {
+  "name": "Labour Force Participation Rate of HDB Resident Population by Flat Type",
+  "tag": "housing"
+ },
+ "d_ec086b29a5c1eed4aad343faf433bae6": {
+  "name": "Resident Households with Specified Consumer Durables/Services by Income Quintile (Household Expenditure Survey 2017/18)",
+  "tag": "cost_of_living"
+ },
+ "d_edf8bb4773c25dd16b8b6875fd0b52da": {
+  "name": "Resident Households By Type Of Dwelling, Annual",
+  "tag": "housing"
+ },
+ "d_ee1d351a1ada8510602315a77257865c": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_ee7e46d3c57f7865790704632b0aef71": {
+  "name": "CEA Salespersons’ Property Transaction Records (residential)",
+  "tag": "housing"
+ },
+ "d_f078b7a2e3b220af4d3bfe676c4e7e69": {
+  "name": "Computer ownership by housing type",
+  "tag": "housing"
+ },
+ "d_f0c768860912d66940efdac9435dc046": {
+  "name": "Housing And Development Board (HDB) Resale Price Index (1Q2009 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_f0d327721805672aa181014c6ea821ec": {
+  "name": "Import Price Index, By Commodity Group (3-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_f333bf427c827efb484cf57a73ff700a": {
+  "name": "Commercial Property Price Index (Base Quarter 1998-Q4 = 100), Quarterly",
+  "tag": "housing"
+ },
+ "d_f43ed2489fad49824702c2169561a432": {
+  "name": "Flats Constructed By Housing And Development Board, Annual",
+  "tag": "housing"
+ },
+ "d_f4560da11b22b47050c75bdffb1d93e0": {
+  "name": "Average And Median Monthly Household Employment Income (Including Employer CPF Contributions) Among Resident And Resident Employed Households, 2000 - 2025 (Household Income, Annual)",
+  "tag": "cost_of_living"
+ },
+ "d_f5d9209c996b9d9fc6c2a781aa23fcbf": {
+  "name": "Number of Salary Claims by Claim Items, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_f65e490a8ad430f60a9a3d9df2bff2a0": {
+  "name": "Property Price Index of Non-landed Properties by Locality, Quarterly",
+  "tag": "housing"
+ },
+ "d_f6aa3f47a317d0b65e9f5801cb80511b": {
+  "name": "Export Price Index, By Commodity Division (2-Digit Level), Base Year 2023 = 100, Monthly",
+  "tag": "cost_of_living"
+ },
+ "d_f6bb09a80385c4ddb14f3a94e0081c0e": {
+  "name": "Singapore Manufactured Products Price Index, By Commodity Section (1-Digit Level), Base Year 2023 = 100, Annual",
+  "tag": "cost_of_living"
+ },
+ "d_f76411aa34d98559b6194419d796ce59": {
+  "name": "Private Residential Property Price Index (Base Quarter 2009-Q1 = 100)",
+  "tag": "housing"
+ },
+ "d_f97971e730d675ae046cc75690468c02": {
+  "name": "No of Dwelling Units and Commercial Developments built",
+  "tag": "housing"
+ },
+ "d_fbb057402a1d4a953a9b46babbdbf1fc": {
+  "name": "Applications Received to Finance Purchases/Refinance Mortgage Loan with Bank Loans",
+  "tag": "housing"
+ },
+ "d_fcf9b47a2df0c9183875bbfb1c370077": {
+  "name": "Ordinary wage ceiling",
+  "tag": "cost_of_living"
+ },
+ "d_fcfc5a44d2e3d783b895f4b4016b84d9": {
+  "name": "Employed HDB Resident Population by Occupation and Age",
+  "tag": "housing"
+ },
+ "d_fd59b378382d9120f872ee08c7b26380": {
+  "name": "Supply of Commercial Properties in the Pipeline, Quarterly",
+  "tag": "housing"
+ },
+ "d_ff1988785f3e36cfc4757cf604ae0acd": {
+  "name": "Monthly Household Employment Income (Excluding Employer CPF Contributions) Among Resident Employed Households at Selected Percentiles (Household Income, Annual 2000-2025)",
+  "tag": "cost_of_living"
+ }
+}
