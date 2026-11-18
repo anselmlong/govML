@@ -8,92 +8,78 @@ web
 
 ## Users
 
-Civic-tech and open-data enthusiasts: hobbyists, independent researchers, and
-builders exploring Singapore's open government data for interesting patterns,
-who want to try an idea against a real dataset without first setting up their
-own scraping, cleaning, and modeling stack.
+Curious Singaporeans, civic-tech hobbyists, students and journalists who suspect data.gov.sg
+holds more than anyone has looked at, and who would rather read a finding than build a pipeline
+to look for one.
 
 ## Product Purpose
 
-govML turns a data.gov.sg dataset into a trained model and a readable report
-in one pass, so someone curious about a dataset can find out in minutes
-whether there's a signal worth pursuing, instead of investing in a pipeline
-first and finding out later. The fast loop:
+govML is an atlas of Singapore in numbers. It reads data.gov.sg as one connected body of
+**series** (a number over time, such as monthly resale prices or quarterly CPI), and pre-computes
+what relates to what across the catalog:
 
-1. Search or browse the semantic map of data.gov.sg datasets.
-2. Inspect metadata, sample rows, schema, and ML suitability.
-3. Launch the nine-phase pipeline with conservative defaults.
-4. Watch logs and stage progress in the runner.
-5. Open a self-contained report with model metrics, diagnostics, context, and
-   related datasets.
+- which series move together, and which leads which, and by how long;
+- where a series broke (COVID, a policy change);
+- which datasets share a key and can actually be joined.
+
+A visitor browses findings they could share, not models they would have to judge. Each finding
+links to the series behind it and to the project ideas it opens up.
 
 ## Positioning
 
-Two things a neighboring tool couldn't truthfully claim together:
-
-- **A semantic map as the discovery surface.** Datasets are embedded and laid
-  out spatially so someone can browse by meaning and stumble onto a related
-  dataset, not just keyword-search a catalog they'd need to already know how
-  to query.
-- **Zero-setup, one-click pipeline.** From a raw data.gov.sg dataset ID to a
-  trained model and self-contained HTML report, with no pandas/sklearn code,
-  no environment setup, and no signup, on the user's own machine.
+- **Cross-dataset, not per-dataset.** Other tools show one dataset at a time. govML's unit is the
+  relationship between datasets, found across the whole catalog.
+- **Every finding is earned.** A relationship is shown only after it survives detrending,
+  multiple-testing correction and an out-of-sample lag check, and an LLM review has removed pairs
+  that are one quantity counted twice. Coincidences stay out.
 
 ## Operating Context
 
-Runs locally: a FastAPI backend, a Vite/React frontend, and a Python CLI
-pipeline, all against a local SQLite catalog (`catalog.db`) built by ingesting
-data.gov.sg's dataset API. No user accounts or server-side deployment; the
-person running it owns the machine and the process.
+A public, read-only static site. A weekly batch job on the VPS ingests the catalog, turns tables
+into series, tests relationships, and writes JSON artifacts; the frontend is a static build that
+reads them. There is no always-on backend and no visitor-triggered compute. The per-dataset ML
+pipeline remains as an operator-only tool.
 
 ## Capabilities and Constraints
 
-- The product favors graceful degradation: if LLM access, research,
-  embeddings, optional model packages, or catalog data are unavailable, the
-  pipeline and catalog continue with deterministic heuristics rather than
-  failing outright.
-- Real OpenAI embeddings (`OPENAI_API_KEY`) meaningfully improve the semantic
-  map's clustering quality over the built-in local hashed fallback; both
-  paths must keep working since the key is optional infrastructure, not a
-  requirement to use the tool.
-- The catalog currently holds the full data.gov.sg dataset listing (~4,600+
-  datasets) and is expected to keep growing as agencies publish more.
+- The front door is the semantic map of all ~4,600 datasets. v1 lights up one theme, housing plus
+  cost of living, and draws verified findings as lines between the datasets they connect.
+- Most SingStat tables put time across the columns and need flipping; most other agencies' tables
+  are already long-form. Both become series. Single-year snapshots (input-output tables, census
+  cross-tabs) are not series and wait for v2's place-based analysis.
+- Units differ between rows of one table, so each series carries its own unit and comparisons work
+  on changes, not levels.
+- Project ideas come in two labelled kinds: verified ones derived from a finding or a tested join,
+  shown first, and brainstormed ones, shown separately.
+- LLM work (the same-quantity review, idea write-ups) goes through OpenRouter with a configurable
+  model.
 
 ## Brand Commitments
 
-govML has its own distinct visual identity, deliberately departing from
-data.gov.sg's own design system (a user-confirmed decision, replacing an
-earlier constraint that mirrored it). The identity draws on hydrographic-
-chart and land-survey drafting: Singapore's own civic history as a nation
-defined by reclaimed land and precise surveying (SLA cadastral plots, the
-Singapore Strait's charts) is the visual world for a tool whose core
-artifact is itself a spatial chart of datasets. Concretely: an ink/parchment
-"chart paper" palette with a bearing-red signature accent, a serif
-(Fraunces) used with restraint for headings against a civic sans (Public
-Sans) for UI text and a monospace (IBM Plex Mono) for coordinates, scores,
-and log/metric readouts, and a compass-rose motif that doubles as the map's
-orientation control and the app's loading indicator. Copy stays plain and
-literal (Operate-mode conventions: search, ask, run) rather than leaning on
-nautical wordplay; the identity lives in the visual system, not the labels.
-govML uses its own name and mark throughout, with no claim to be an
+The earlier hydrographic-chart identity is retired with the old product. The new identity will be
+shaped with impeccable once v1 has real findings to design around. govML never claims to be an
 official government surface.
 
 ## Evidence on Hand
 
-- A live local catalog of real data.gov.sg datasets (`catalog.db`,
-  `map_coords.json`), ingested and embedded during development, not sample or
-  placeholder data.
-- Real pipeline runs have been executed end-to-end against real datasets
-  (e.g. HDB resale flat prices), producing real trained models and metrics.
+- `catalog.db` on the VPS: 4,625 datasets from 75 agencies, all embedded
+  (`text-embedding-3-small`). SingStat is 49% of the catalog; 555 datasets are GeoJSON layers.
+- 1,685 datasets cached as parquet. Of those, about 180 SingStat tables are wide time tables and
+  about 900 other tables are long-form with a time column.
+- The 1,654 per-dataset run verdicts from August 2026 are being deleted: many "good" verdicts were
+  trivial (a table's total predicted from its own parts) or nonsense (day-of-week from a prayer
+  timetable).
 
 ## Product Principles
 
-1. Never let a missing API key or package block the user; degrade to a
-   heuristic and say so, don't fail closed.
-2. The suitability check comes before the compute: tell someone a dataset is
-   a poor fit before they wait through a full training run, not after.
-3. One dataset ID in, one self-contained report out; the pipeline should not
-   require the user to write or debug code.
-4. The map is a discovery tool first, a visualization second: favor
-   navigability (real clustering signal, clickable density) over decorative
-   polish.
+1. A finding a visitor would share beats ten they would skim. Rank by surprise, cut by rigour.
+2. Never show a relationship the data cannot defend; when in doubt, leave it out.
+3. Precompute everything. A visitor never waits for a model.
+4. The map is for discovery. Clusters, highlighted themes and finding lines carry real signal, not
+   decoration.
+
+## v1 is done when
+
+The site is public, the whole-catalog map is live with the housing and cost-of-living theme lit,
+at least 20 verified findings are good enough to share personally, and the weekly batch runs on
+the VPS.
