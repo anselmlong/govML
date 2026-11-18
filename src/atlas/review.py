@@ -49,6 +49,13 @@ You are the reviewing editor for govML, a public site that shows Singaporeans su
 defensible relationships between government datasets. A statistical engine has already proposed the
 candidate pair you are given. Your job is to decide whether it is worth showing, and if so to describe it.
 
+The pair has already passed these statistical gates, so do not re-judge them from the excerpt: the lag was
+chosen on the earlier 70% of the data and held on the later 30% (r_test) after a multiple-testing correction
+(p_test_adj), using changes not levels with seasonality removed, and it still holds with 2020-2021 removed
+(r_ex_covid) or by rank (r_test_spearman). Your job is the judgment statistics cannot make: is this one
+quantity counted twice, an identity, something nobody would be surprised by, or an artefact of how the
+tables are built?
+
 Be strict. When in doubt, drop. A finding a visitor would share beats ten they would skim, and a bad
 finding costs more than a missing one.
 
@@ -57,7 +64,7 @@ Drop the pair when it is:
 - component_of_total: one series is a part of the other (a total and one of its own components or sub-totals).
 - mechanical_identity: they are linked by an accounting identity or definition (a ratio and its numerator, a stock and its flow, a price and an index built from it).
 - trivially_obvious: the link is real but nobody would be surprised (rainfall and rainfall days, population and housing stock).
-- likely_artefact: the link is probably produced by shared seasonality, a common shock such as 2020, a shared base year or smoothing, or a short or chance-prone sample. A lag that looks arbitrary, or an r that depends on the COVID period (compare r_ex_covid with r_test), also belongs here.
+- likely_artefact: the link is probably produced by how the tables are built (shared base year, smoothing, one survey feeding both), or r_test is far above r_train, which suggests a single recent episode rather than a stable relationship.
 
 Rules you must follow:
 - Use only the numbers given to you. Never invent, estimate or recall figures, dates or events. Quote a number only if it appears in the input.
@@ -69,10 +76,11 @@ Rules you must follow:
 - ideas: project ideas that build on this relationship. Each has title, description and kind.
   kind "verified" means the idea follows directly from the tested relationship (for example, track y using x as an early indicator).
   kind "brainstormed" means it is speculative, going beyond what was tested. Label honestly. Give at most 3 ideas in total.
+- rationale: always 1 or 2 sentences saying why you kept or dropped it. This is for the editor, not the public.
 - If you drop, set headline, explanation and ideas to empty values ("" and []) and put the reason in drop_reason. If you keep, drop_reason must be null.
 
 Reply with a single JSON object and nothing else, with exactly these keys:
-{"verdict": "keep" | "drop",
+{"verdict": "keep" | "drop", "rationale": string,
  "drop_reason": "same_quantity" | "component_of_total" | "mechanical_identity" | "trivially_obvious" | "likely_artefact" | null,
  "headline": string, "explanation": string, "caveats": [string],
  "ideas": [{"title": string, "description": string, "kind": "verified" | "brainstormed"}]}
@@ -187,11 +195,14 @@ def validate_review(obj: dict[str, Any]) -> dict[str, Any]:
     if verdict not in ("keep", "drop"):
         raise ReviewError("verdict must be keep or drop")
     reason = obj.get("drop_reason")
+    rationale = _text(obj, "rationale")
+    if not rationale:
+        raise ReviewError("every verdict needs a rationale")
     if verdict == "drop":
         if reason not in DROP_REASONS:
             raise ReviewError("a drop needs a valid drop_reason")
-        return {"verdict": "drop", "drop_reason": reason, "headline": "", "explanation": "",
-                "caveats": [], "ideas": []}
+        return {"verdict": "drop", "drop_reason": reason, "rationale": rationale, "headline": "",
+                "explanation": "", "caveats": [], "ideas": []}
     if reason is not None:
         raise ReviewError("a keep must have drop_reason null")
     headline, explanation = _text(obj, "headline"), _text(obj, "explanation")
@@ -211,7 +222,7 @@ def validate_review(obj: dict[str, Any]) -> dict[str, Any]:
             raise ReviewError("each idea needs a kind of verified or brainstormed")
         clean.append({"title": _text(i, "title"), "description": _text(i, "description"), "kind": i["kind"]})
     clean.sort(key=lambda i: i["kind"] != "verified")
-    return {"verdict": "keep", "drop_reason": None, "headline": headline, "explanation": explanation,
+    return {"verdict": "keep", "drop_reason": None, "rationale": rationale, "headline": headline, "explanation": explanation,
             "caveats": [c.strip() for c in caveats if c.strip()], "ideas": clean}
 
 
@@ -436,7 +447,7 @@ def review(store: Path, client: Client | None, model: str, top: int = 60, dry_ru
             findings.append({**base, **{k: reply[k] for k in ("headline", "explanation", "caveats", "ideas")},
                              "model": model})
         else:
-            dropped.append({**base, "drop_reason": reply["drop_reason"]})
+            dropped.append({**base, "drop_reason": reply["drop_reason"], "rationale": reply["rationale"]})
 
     notes: list[dict] = []
     if not breaks.empty:

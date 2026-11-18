@@ -9,12 +9,12 @@ from src.atlas import review as R
 KEY = "sk-or-SECRET-KEY-123"
 PERIODS = [f"2020-{m:02d}" for m in range(1, 13)] + [f"2021-{m:02d}" for m in range(1, 13)] + ["2022-01", "2022-02"]
 
-KEEP = {"verdict": "keep", "drop_reason": None, "headline": "Rents tend to rise before prices.",
+KEEP = {"verdict": "keep", "rationale": "Distinct markets with a stable lead.", "drop_reason": None, "headline": "Rents tend to rise before prices.",
         "explanation": "Over 2020 to 2022, rents moved before prices by 2 months, with caution.",
         "caveats": ["Short sample"], "ideas": [
             {"title": "Brainstorm", "description": "speculative", "kind": "brainstormed"},
             {"title": "Early indicator", "description": "track prices with rents", "kind": "verified"}]}
-DROP = {"verdict": "drop", "drop_reason": "component_of_total"}
+DROP = {"verdict": "drop", "rationale": "One is a part of the other.", "drop_reason": "component_of_total"}
 
 
 class Resp:
@@ -238,3 +238,8 @@ def test_load_api_key_reads_env_file_without_exporting_it(tmp_path, monkeypatch)
     assert R.load_api_key(env) == "abc123"
     monkeypatch.setenv("OPENROUTER_API_KEY", "fromenv")
     assert R.load_api_key(env) == "fromenv"
+
+
+def test_a_verdict_without_a_rationale_is_rejected():
+    with pytest.raises(R.ReviewError):
+        R.validate_review({k: v for k, v in DROP.items() if k != "rationale"})
