@@ -100,9 +100,12 @@ Units vary between rows of one table, so the engine only ever works on changes, 
    - *Same table.* A table key is the lowercased name with these stripped: frequency words,
      index-base phrases (`(1Q2009 = 100)`, `Base Year 2023 = 100`, `2024 As Base Year`,
      `(BASE QUARTER 1998-Q4 = 100)`), `(Based on ... Date)`, the price basis (`In Chained Volume
-     Terms`, `At Current Prices`), the breakdown (`By Commodity Section (1-Digit Level)`,
-     `by Market Segment`, `By Locality`), the URA region (`in Core Central Region`) and a
-     leading `Average`/`Total`. Each key keeps one dataset: the finest frequency first, then one
+     Terms`, `At Current Prices`), a listed breakdown (`By Commodity Section (1-Digit Level)`,
+     `By Type Of Property`, `by Market Segment`, `By Locality`, `by Sex`), the URA region
+     (`in Core Central Region`) and a leading `Average`/`Total`. Breakdowns are listed rather
+     than matched as any `by ...`. In `Resident Households by Monthly Household Employment
+     Income` the clause is the subject, and a generic strip merged per-household with
+     per-member income. Each key keeps one dataset: the finest frequency first, then one
      with a headline row, then the most points. So 1-, 2- and 3-digit commodity tables, monthly
      and quarterly twins, the four regional transaction tables, the private price index variants
      and town gas average versus total each count once.
@@ -150,7 +153,7 @@ Units vary between rows of one table, so the engine only ever works on changes, 
 
 #### Numbers from the housing and cost-of-living store
 
-Representatives after rule 2: A 250, M 69, Q 93. Rule 2 dropped 148 for same table and 14 as
+Representatives after rule 2: A 265, M 69, Q 93. Rule 2 dropped 133 for same table and 14 as
 duplicates. Cross-dataset M/Q pairs number 30,150 before rule 2 and 10,745 after. The tested
 family is F = 5,461. Rule 3 (overlap) dropped 4,394 pairs and flat series 832.
 
@@ -158,7 +161,7 @@ family is F = 5,461. Rule 3 (overlap) dropped 4,394 pairs and flat series 832.
 - BH made 21 discoveries, which puts the cutoff at p = 1.9e-4.
 - The smallest detectable |r| at that cutoff is 0.71 at the median n_test and 0.77 at the
   median n_eff.
-- Survivors: 15 (13 comove, 2 lead). BH killed 5,440, sign 2, COVID 4. 40 of 241 series
+- Survivors: 15 (13 comove, 2 lead). BH killed 5,440, sign 2, COVID 4. 40 of 249 series
   clear the break critical value.
 
 The spec's sanity check assumed n_eff around 40. The real median is 18, because most tested
@@ -170,6 +173,14 @@ relationships can clear.
 
 Across 5,461 tests, 6.3% of raw p fall below 0.05. On synthetic independent AR(0.6) walks the
 corrected share is 3%, against 16% with the naive n.
+
+How rule 2 got here. With only the spec's pair drop, 251 candidates survived, most of them
+copies. Collapsing tables and duplicate series brought that to 36. Fitting the duplicate check's
+season means on the overlap brought it to 34. The average/total strip and the same-row rule
+brought it to 23, and the SITC-sibling rule to 15. The BH cutoff tightened from 7.4e-4 to 1.9e-4
+while F shrank. Duplicated true positives had been inflating the discovery count D, and that
+loosened the cutoff for every pair. So removing series fixes the statistics, not only the
+presentation.
 
 What survived: one same-count artefact, the whole-of-Singapore new-sale uncompleted transactions
 against uncompleted units sold in RCR, a component of the same count. Plausible relationships:

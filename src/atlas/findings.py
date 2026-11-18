@@ -128,15 +128,17 @@ _COMMODITY = re.compile(r"\(\d-digit level\)")
 _BY_CLAUSE = r"\bby\b[^,()]*"
 _BREAKDOWN_STRIP = [
     _COMMODITY.pattern,
-    _BY_CLAUSE,
+    r"\bby (commodity (section|division|group)|type of property|type|market segment|locality"
+    r"|geographical distribution|(age and )?sex)\b",
     r"\bin (the )?(whole of singapore|core central region|rest of central region|outside central region)\b",
 ]
 
 
 def table_key(name: str) -> str:
     """A dataset name with frequency words, base-year phrases, '(Based on ... Date)', the price
-    basis and the breakdown ('By Commodity Group (3-Digit Level)', 'by Market Segment',
-    'in Core Central Region') stripped. Tables that share a key are one publication sliced
+    basis and a breakdown ('By Commodity Group (3-Digit Level)', 'by Market Segment',
+    'in Core Central Region') stripped. Breakdowns are listed, not matched as any 'by ...':
+    in 'Resident Households by Monthly Household Employment Income' the clause is the subject. Tables that share a key are one publication sliced
     or based differently, so pairs between them are a series against its own copy or part."""
     s = name.lower()
     for pattern in _SAME_TABLE_STRIP + _BREAKDOWN_STRIP:
