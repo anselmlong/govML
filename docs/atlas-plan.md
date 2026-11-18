@@ -209,6 +209,7 @@ rule can see.
 
 ## Open
 
-- OpenRouter key and default model: pending from Anselm.
+- OpenRouter: key is in `.env`; the review defaults to `anthropic/claude-sonnet-5.5` (override with `--model` or `GOVML_LLM_MODEL`).
+- First run results and the choice of where to take v1 next: `docs/findings-v0.md`.
 - How the weekly batch hands artifacts to the static host (commit, upload, or deploy hook): decide
   in phase 5.
