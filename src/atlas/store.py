@@ -36,6 +36,10 @@ def write_store(series: Iterable[Series], out_dir: str | Path) -> tuple[int, int
     return len(meta), len(ids)
 
 
+def _none(v: object) -> str | None:
+    return None if pd.isna(v) else str(v)
+
+
 def read_store(out_dir: str | Path) -> list[Series]:
     out = Path(out_dir)
     meta = pd.read_parquet(out / META_FILE)
@@ -46,7 +50,7 @@ def read_store(out_dir: str | Path) -> list[Series]:
         g = by_id[r.series_id]
         out_series.append(Series(
             series_id=r.series_id, dataset_id=r.dataset_id, label=r.label, dims=json.loads(r.dims),
-            measure=r.measure, unit=r.unit, freq=r.freq,
+            measure=_none(r.measure), unit=_none(r.unit), freq=r.freq,
             points={p: float(v) for p, v in zip(g["period"], g["value"])},
         ))
     return out_series

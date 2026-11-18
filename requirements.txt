@@ -6,6 +6,7 @@ xgboost>=2.1
 shap>=0.46
 matplotlib>=3.9
 pyarrow>=17
+scipy>=1.11
 truststore>=0.10
 markdown>=3.6
 lightgbm>=4.5
