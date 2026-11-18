@@ -444,7 +444,7 @@ def review(store: Path, client: Client | None, model: str, top: int = 60, dry_ru
             log(f"review_error {c['x']} / {c['y']}: {client.scrub(str(e))}")
             continue
         if reply["verdict"] == "keep":
-            findings.append({**base, **{k: reply[k] for k in ("headline", "explanation", "caveats", "ideas")},
+            findings.append({**base, **{k: reply[k] for k in ("headline", "explanation", "caveats", "ideas", "rationale")},
                              "model": model})
         else:
             dropped.append({**base, "drop_reason": reply["drop_reason"], "rationale": reply["rationale"]})
