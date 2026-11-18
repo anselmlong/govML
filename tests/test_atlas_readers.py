@@ -149,3 +149,26 @@ def test_tables_no_reader_can_use_say_why(data, reason):
 def test_named_year_columns_are_time_axes():
     r = flip(table({"year_of_assessment": ["2008", "2009", "2010"], "taxable": ["1", "2", "3"]}))
     assert isinstance(r, Matched) and r.series[0].freq == "A"
+
+
+def test_a_long_table_with_many_categories_each_in_every_year_is_not_records():
+    frame = pd.DataFrame({
+        "year": [str(y) for y in (2021, 2022, 2023) for _ in range(1000)],
+        "category": [f"cat{i}" for _ in range(3) for i in range(1000)],
+        "value": [float(i) for i in range(3000)],
+    })
+    result = flip(Table("d_long", "Usage by page", frame))
+    assert isinstance(result, Matched) and result.reader == "long_time" and len(result.series) == 1000
+
+
+def test_event_rows_with_repeating_keys_aggregate_to_counts_and_medians():
+    frame = pd.DataFrame({
+        "month": ["2024-01"] * 4 + ["2024-02"] * 4 + ["2024-03"] * 4 + ["2024-04"] * 2000,
+        "town": ["A", "A", "B", "B"] * 3 + ["A", "B"] * 1000,
+        "price": [1.0, 3.0, 5.0, 7.0] * 3 + [2.0] * 2000,
+    })
+    result = flip(Table("d_evt", "Sales", frame))
+    assert isinstance(result, Matched) and result.reader == "records"
+    by_id = {s.series_id: s for s in result.series}
+    assert by_id["d_evt:all:count"].points == {"2024-01": 4.0, "2024-02": 4.0, "2024-03": 4.0, "2024-04": 2000.0}
+    assert by_id["d_evt:a:median-price"].points["2024-01"] == 2.0

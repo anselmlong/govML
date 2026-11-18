@@ -284,6 +284,7 @@ def read_long_time(table: Table) -> tuple[list[Series], Counter[str]]:
 MIN_RECORD_ROWS = 2000
 RECORD_GROUP_SHARE = 0.3
 RECORD_REPEAT_SHARE = 0.05
+RECORD_KEY_PERIOD_SHARE = 0.5
 MAX_RECORD_DIM_VALUES = 40
 
 
@@ -297,18 +298,22 @@ def _record_shape(df: pd.DataFrame):
     dim_cols = [c for c in rest if c not in measures]
     if not dim_cols:
         return None
-    keys = df[dim_cols].astype("string").fillna("")
-    groups = keys.drop_duplicates().shape[0]
-    repeated = keys.assign(period=periods).duplicated(keep=False).mean()
-    if groups < RECORD_GROUP_SHARE * len(df) and repeated < RECORD_REPEAT_SHARE:
+    keys = df[dim_cols].astype("string").fillna("").agg("\x1f".join, axis=1)
+    repeated = pd.DataFrame({"k": keys, "p": periods}).duplicated(keep=False).mean()
+    if repeated >= RECORD_REPEAT_SHARE:
+        return freq, periods, measures, dim_cols
+    if keys.nunique() < RECORD_GROUP_SHARE * len(df):
+        return None
+    periods_per_key = pd.DataFrame({"k": keys, "p": periods}).dropna().groupby("k")["p"].nunique()
+    if (periods_per_key.reindex(keys).to_numpy() > RECORD_KEY_PERIOD_SHARE * periods.nunique()).mean() >= 0.5:
         return None
     return freq, periods, measures, dim_cols
 
 
 def detect_records(table: Table) -> bool:
-    """One row per event (a resale, a rental approval): either the full dim key is nearly
-    unique per row, or the same key repeats within a period, so no dim combination is a
-    series on its own."""
+    """One row per event (a resale, a rental approval): the same dim key repeats within a
+    period, or keys are nearly unique per row and most of them appear in few periods. A long
+    table with many categories, each present in most periods, is not records."""
     return _record_shape(table.frame) is not None
 
 

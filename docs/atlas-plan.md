@@ -43,8 +43,11 @@ Code lives in `src/atlas/`. Run `python -m src.atlas.flip --all` (or `--datasets
   parents; SingStat indents `DataSeries` by depth, so a repeated label gets a `section` dim holding its
   ancestor chain. Long rows that repeat a period for one dim combination collapse if the values match and
   otherwise skip that series (counted in the report). Nothing is summed or averaged.
-- **Unit records.** If the kept series hold under half of a long table's values (HDB resale prices are
-  one row per transaction), the table is unmatched as `low_row_coverage`. It needs an aggregating reader.
+- **Unit records.** Tables with one row per event (HDB resale, rentals, CEA transactions) go to the
+  `records` reader. That covers two cases: a dim key that repeats within a period, or keys that are
+  nearly unique per row with most of them in few periods. The reader emits per-period counts and
+  measure medians, overall and per dim of up to 40 values. A long table that still keeps under half
+  its values is unmatched as `low_row_coverage`.
 - **Units** are read from the row label (`(Million Dollars)`), the value column name (`MillionDollars`),
   or an index base in the dataset name (`(2017 = 100)`). Otherwise `None`.
 - **Series shorter than 3 points** are skipped and counted.
@@ -168,7 +171,8 @@ family is F = 5,461. Rule 3 (overlap) dropped 4,394 pairs and flat series 832.
 - BH made 21 discoveries, which puts the cutoff at p = 1.9e-4.
 - The smallest detectable |r| at that cutoff is 0.71 at the median n_test and 0.77 at the
   median n_eff.
-- Survivors: 15 (13 comove, 2 lead). BH killed 5,440, sign 2, COVID 4. 40 of 249 series
+- Survivors under the first rules: 15 (13 comove, 2 lead). BH killed 5,440, sign 2, COVID 4. The
+  tightened rules (episode, the 2020-2022 AND gate, one per dataset pair) leave 3. 40 of 249 series
   clear the break critical value.
 
 The spec's sanity check assumed n_eff around 40. The real median is 18, because most tested

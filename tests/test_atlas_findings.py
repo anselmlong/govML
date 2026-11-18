@@ -160,17 +160,34 @@ def test_a_link_that_only_appears_in_the_test_window_is_killed_as_an_episode():
     assert t.status == "rule4_episode" and f.candidates.empty
 
 
-def test_a_pair_linked_only_by_a_2022_shock_is_killed_now_that_the_gate_covers_2022():
-    rng = np.random.default_rng(4)
-    shock = np.zeros(159)
-    for year in (2020, 2022):
-        first = (year - 2011) * 12 + 3 - 9
-        shock[first], shock[first + 2] = -0.15, 0.15
-    series = [monthly(f"d_{k}", rng.normal(0, 0.01, 159) + shock, start=(2011, 10)) for k in "ab"]
-    f = find(series, names_for(series))
-    (t,) = f.tested.itertuples()
-    assert t.p_test_adj < 0.05, "the shock alone passes BH"
-    assert t.status == "rule5_covid" and f.candidates.empty
+def _month_index(year: int, month: int, start: tuple[int, int] = (2011, 10)) -> int:
+    """Position in a `monthly(..., start=start)` changes array of the change into (year, month)."""
+    return (year - start[0]) * 12 + (month - start[1]) - 1
+
+
+def test_a_link_confined_to_2020_through_2022_is_killed_because_the_window_covers_2022():
+    rng = np.random.default_rng(11)
+    common = np.zeros(159)
+    for year in (2020, 2021, 2022):
+        for month in range(1, 13):
+            common[_month_index(year, month)] = rng.normal(0, 0.03)
+    series = [monthly(f"d_{k}", rng.normal(0, 0.01, 159) + common, start=(2011, 10)) for k in "ab"]
+    (t,) = find(series, names_for(series)).tested.itertuples()
+    assert t.p_test_adj < 0.05 and t.p_spearman < 0.05, "rank check alone would pass it"
+    assert t.status == "rule5_covid"
+    (old,) = find(series, names_for(series), Config(covid_years=(2020, 2021))).tested.itertuples()
+    assert old.status == "survived", "a 2020-2021 window lets the 2022 stretch through"
+
+
+def test_a_link_carried_by_one_outlier_fails_the_rank_check_even_though_ex_covid_passes():
+    rng = np.random.default_rng(12)
+    outliers = np.zeros(159)
+    for year, month, v in [(2013, 3, .2), (2015, 3, -.2), (2016, 6, .2), (2018, 6, -.2), (2024, 5, .4)]:
+        outliers[_month_index(year, month)] = v
+    series = [monthly(f"d_{k}", rng.normal(0, 0.01, 159) + outliers, start=(2011, 10)) for k in "ab"]
+    (t,) = find(series, names_for(series)).tested.itertuples()
+    assert t.p_test_adj < 0.05 and t.r_ex_covid > 0.9, "ex-COVID check alone would pass it"
+    assert t.p_spearman > 0.05 and t.status == "rule5_covid"
 
 
 def test_two_rows_of_one_table_linked_to_another_table_give_one_candidate():

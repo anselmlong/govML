@@ -25,14 +25,16 @@ Pairs found inside the theme slice gave no finding. Pairs across the whole catal
   - **Rainy months have cooler nights.** Monthly rain days against the mean daily minimum
     temperature. This is real but close to obvious.
   - **The 10-year government bond yield moves with import prices in the same month**, from 1998
-    to 2026. Sonnet's review of the theme slice under the first prompt dropped the same pair as a
-    2026 one-off. Treat it as kept but contested.
+    to 2026. An earlier Sonnet review of the theme slice dropped the same pair as a 2026 one-off.
+    That review used an earlier prompt, which required a rationale but didn't yet list the gates
+    the pair had passed (archived in the appendix). Treat it as kept but contested.
 
   One pair was kept in only one run of three: a weaker Singapore dollar against higher food prices
   in the same month. It is not counted. Below, the "Kept findings" section of the whole-catalog
   store shows the first of the three runs. Its drop table breaks down as follows:
-  - 21 are a part against its whole (job-vacancy and retrenchment tables publish one quantity
-    several ways);
+  - 21 are a part against its whole. About half are job-vacancy and retrenchment tables, which
+    publish one quantity several ways. The rest are trade, visitor arrivals, vessel arrivals and
+    vehicle counts;
   - 15 are obvious;
   - 11 are artefacts;
   - 5 are the same quantity;
@@ -47,24 +49,27 @@ Pairs found inside the theme slice gave no finding. Pairs across the whole catal
 ## Why so few
 
 - **Power.** Most series are quarterly or annual. Pairs tested at the median have about 22
-  effective test points. A relationship has to reach |r| ≈ 0.65 to clear the multiple-testing bar.
-  Housing pairs mostly die at that step. Annual series are not paired at all.
+  effective test points. A relationship has to reach |r| ≈ 0.65 to 0.67 to clear the multiple-testing
+  bar across the catalog. In the housing slice the bar is 0.71 to 0.77, and BH kills 5,440 of the
+  5,461 pairs tested. Annual series are not paired at all.
 - **One quantity, many tables.** data.gov.sg publishes the same quantity in many cuts (by industry,
   by occupation, monthly and quarterly, at current and constant prices). Rule 2 collapses the
   obvious copies. The rest, such as a component inside a total in another table, need the LLM
   reviewer, which is doing that job well.
 - **The calendar.** Monthly totals share calendar effects that subtracting each month's mean
   doesn't remove: February's length, and Chinese New Year moving between January and February.
-  The reviewer caught at least two pairs linked only by this.
+  One reviewed pair (F&B services against foreign aircraft movements) was linked only by
+  this. Three more drops cite it alongside other reasons.
 
 ## Changes made tonight because of what the data showed
 
 - Phase 2 added a records reader. HDB resale, rental and CEA tables have one row per transaction,
   so they are now monthly medians and counts, overall and by town or flat type. Those tables were
-  re-downloaded in full through the bulk endpoint. The paged API had capped them at 10,000 rows
-  and then reported them as gone.
+  re-downloaded in full through the bulk endpoint. The cache had them capped at 10,000 rows. Asked for
+  more, the paged API threw deep-page 404s, which `fetch.py` reads as "gone".
 - The COVID gate excludes 2020 to 2022 and requires both the rank check and the ex-COVID check.
-  COVID-recovery pairs, such as aircraft movements against property transactions, had been passing.
+  Most COVID-recovery pairs had been passing before. One still gets through the gate: CEA
+  rental transactions against aircraft arrivals, at a lag of 3 months. The reviewer drops it.
 - New rules drop a pair whose test correlation is more than double its training correlation (one
   episode, not a stable link), and keep one candidate per pair of datasets.
 - The reviewer must give a rationale for every verdict, and the default model is now Sonnet 5.5.
