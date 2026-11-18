@@ -7,7 +7,7 @@ reviewer's reason. The break tables come after the candidates. The document is g
 
 ## What came out
 
-Pairs found inside the theme slice gave no shareable finding. Pairs across the whole catalog gave one.
+Pairs found inside the theme slice gave no finding. Pairs across the whole catalog gave two stable ones, and neither is the kind people would share.
 
 - **Theme slice (housing plus cost of living).** 206 tables became 6,801 series. Under the
   first version of the rules, 15 candidates passed the gate. The reviewer dropped all 15, and each
@@ -17,16 +17,28 @@ Pairs found inside the theme slice gave no shareable finding. Pairs across the w
   - the USD rate passing into SGD-denominated prices;
   - prices and rents built from the same market.
 
-  The tightened rules (below) leave 3 candidates, and the reviewer dropped those as well.
-- **Whole catalog.** 1,053 tables became 48,637 series, and 120 candidates passed the gate. The
-  reviewer read the top 60 and kept 1: bond yields move with import prices in the same month.
-  The drops break down as follows:
+  The tightened rules (below) leave 3 candidates, and the reviewer dropped those as well. The
+  15 first-rules drops and their rationales are archived in the appendix.
+- **Whole catalog.** 1,053 tables became 48,637 series. Under the tightened rules, 120 candidates
+  pass the gate. I ran the reviewer (Sonnet 5.5) three times over the top 60, each with an empty
+  cache. Two pairs were kept in all three runs:
+  - **Rainy months have cooler nights.** Monthly rain days against the mean daily minimum
+    temperature. This is real but close to obvious.
+  - **The 10-year government bond yield moves with import prices in the same month**, from 1998
+    to 2026. Sonnet's review of the theme slice under the first prompt dropped the same pair as a
+    2026 one-off. Treat it as kept but contested.
+
+  One pair was kept in only one run of three: a weaker Singapore dollar against higher food prices
+  in the same month. It is not counted. Below, the "Kept findings" section of the whole-catalog
+  store shows the first of the three runs. Its drop table breaks down as follows:
   - 21 are a part against its whole (job-vacancy and retrenchment tables publish one quantity
     several ways);
-  - 17 are obvious (rain days against humidity);
-  - 10 are artefacts;
-  - 8 are the same quantity;
-  - 3 are identities.
+  - 15 are obvious;
+  - 11 are artefacts;
+  - 5 are the same quantity;
+  - 5 are identities.
+
+  So two findings survived. Neither is the kind people would share.
 - **Breaks are the stronger material.** 133 series show a structural break above the 1% critical
   value. In the theme slice, the strongest line up with known events: the 1997 peak in the resale index, the
   2012 to 2013 cooling measures, and the 2018 vehicle-growth change. The notes are labelled
@@ -67,5 +79,7 @@ Pairs found inside the theme slice gave no shareable finding. Pairs across the w
    the others, and where prices diverged.
 3. **Add a calendar adjustment for monthly flows** (trading days, Chinese New Year). Then rerun
    the cross-catalog pairs. That should lift monthly power and remove a class of false links.
-4. **Relax the bar to show "suggestive" links with the label "suggestive".** That conflicts with the
+4. **Require reviewer agreement.** Verdicts changed between runs and between prompt versions. A
+   finding should need a keep in several runs, or from two models.
+5. **Relax the bar to show "suggestive" links with the label "suggestive".** That conflicts with the
    honesty bar you picked, so it's your call, and I haven't done it.
