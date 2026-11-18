@@ -24,3 +24,4 @@ frontend/dist/
 
 batch_ml_log.txt
 frontend/.deploy/
+/atlas/

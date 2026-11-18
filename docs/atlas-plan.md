@@ -32,6 +32,24 @@ no reader matches is recorded with its reason, never silently dropped.
 | `long_time` | a time column (`year`, `month`, `quarter`), category columns, value columns | Job Vacancy by Industry, Annual |
 | unmatched | single-year snapshots: input-output tables, census cross-tabs | kept for v2 (places) |
 
+### Flipper decisions (phase 1)
+
+Code lives in `src/atlas/`. Run `python -m src.atlas.flip --all` (or `--datasets id1,id2`); it writes
+`atlas/series_meta.parquet`, `atlas/series_points.parquet`, `atlas/coverage.json` and `atlas/coverage.md`.
+
+- **Periods** are strings that sort within a frequency and name it: `2024-09` (M), `2024Q3` (Q),
+  `2024H2` (H), `2024` (A). `Series.points` is a dict, so a period cannot repeat.
+- **Duplicates.** Every non-time, non-numeric column is a dim. Wide tables repeat labels under different
+  parents; SingStat indents `DataSeries` by depth, so a repeated label gets a `section` dim holding its
+  ancestor chain. Long rows that repeat a period for one dim combination collapse if the values match and
+  otherwise skip that series (counted in the report). Nothing is summed or averaged.
+- **Unit records.** If the kept series hold under half of a long table's values (HDB resale prices are
+  one row per transaction), the table is unmatched as `low_row_coverage`. It needs an aggregating reader.
+- **Units** are read from the row label (`(Million Dollars)`), the value column name (`MillionDollars`),
+  or an index base in the dataset name (`(2017 = 100)`). Otherwise `None`.
+- **Series shorter than 3 points** are skipped and counted.
+- **Cache cap.** Tables that hit the 10,000-row cache cap are flagged in the report as possibly truncated.
+
 ## Phases
 
 1. **Flipper.** Reader registry, both readers, `Series` model and parquet store, a coverage report
