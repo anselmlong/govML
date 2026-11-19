@@ -1,7 +1,7 @@
 # Atlas plan
 
-How govML gets from the per-dataset pipeline to the atlas described in `PRODUCT.md`. Data first:
-the design pass waits until real findings exist.
+How govML gets from the per-dataset pipeline to the timeline described in `PRODUCT.md`. Data
+first: the design pass waits until real year pages exist.
 
 ## Data shape
 
@@ -204,23 +204,38 @@ rule can see.
 
 ## Phases
 
-1. **Flipper.** Reader registry, both readers, `Series` model and parquet store, a coverage report
-   of matched vs unmatched tables with reasons. Delete the 1,654 old run verdicts (back up first).
-2. **Theme slice.** Select the housing and cost-of-living datasets, fetch any not yet cached, and
-   flip them. Report series count by frequency and span.
-3. **Findings engine.** Align pairs by frequency, difference or detrend, test co-movement and
-   lead/lag with multiple-testing correction, require the lag to hold out-of-sample, detect
-   structural breaks. Output ranked candidates.
-4. **Review.** An OpenRouter LLM pass drops same-quantity pairs (a total and its own component) and
-   writes finding text and project ideas, labelled verified or brainstormed.
-5. **Artifacts.** A weekly batch writes static JSON: map coordinates, theme membership, findings,
-   series excerpts, ideas. Cron on the VPS.
-6. **Design.** impeccable shaping pass on real findings, then build the static frontend.
-7. **Launch.** Public deploy. Done when 20 findings are good enough to share.
+Phases 1 to 4 ran on 2026-11-19 (results: `docs/findings-v0.md`). The product then moved from
+cross-dataset relationships to a timeline (see `PRODUCT.md`). Phases 5 onward are the timeline.
+
+1. **Flipper.** Done.
+2. **Theme slice.** Done, and kept as a test fixture.
+3. **Findings engine.** Done. Its pair tests now feed only the "moves with" panel on series pages.
+4. **Review.** Done. Pairs show only when the reviewer keeps them across repeated runs.
+5. **Whole-catalog fetch.** Fetch every tabular dataset not yet cached. Big tables go through the
+   bulk `poll-download` endpoint, and the paged API is not used for deep pages. Flip everything and
+   report coverage.
+6. **Strict breaks.** Replace the iid sup-F with a test that holds up on autocorrelated series,
+   such as a HAC variance or a block bootstrap. Record each break's direction and size. Then
+   check the rate on synthetic series with no break.
+7. **Clusters.** Group breaks by period. A cluster needs at least 5 series from at least 3
+   datasets; tune these numbers on the full data and log the choice. Rank clusters by the number of
+   independent datasets. Annual breaks sit at the year level, and finer ones drill down.
+8. **Cause guesses.** An OpenRouter LLM names each cluster. It is shown as "likely ..." or
+   "unexplained", and is never stated as fact. Replies are cached.
+9. **Artifacts and weekly batch.** Static JSON for:
+   - the year index and year pages;
+   - one file per dataset for the series pages;
+   - the "moves with" panels;
+   - the map.
+
+   Cron on the VPS.
+10. **Design.** An impeccable shaping pass on real year pages, then the static frontend: timeline,
+    year pages, series pages, map page.
+11. **Launch.** Public deploy, which is the v1 done criteria in `PRODUCT.md`.
 
 ## Open
 
 - OpenRouter: key is in `.env`; the review defaults to `anthropic/claude-sonnet-5.5` (override with `--model` or `GOVML_LLM_MODEL`).
 - First run results and the choice of where to take v1 next: `docs/findings-v0.md`.
 - How the weekly batch hands artifacts to the static host (commit, upload, or deploy hook): decide
-  in phase 5.
+  in phase 9.

@@ -14,72 +14,77 @@ to look for one.
 
 ## Product Purpose
 
-govML is an atlas of Singapore in numbers. It reads data.gov.sg as one connected body of
-**series** (a number over time, such as monthly resale prices or quarterly CPI), and pre-computes
-what relates to what across the catalog:
+govML is a **timeline of Singapore in numbers**. It reads all of data.gov.sg as one body of
+**series** (a number over time, such as monthly resale prices or quarterly job vacancies), finds the
+moments each series changed course, and groups those moments by date. A year page answers: what
+changed in Singapore that year, across every number the government publishes, and what probably
+caused it.
 
-- which series move together, and which leads which, and by how long;
-- where a series broke (COVID, a policy change);
-- which datasets share a key and can actually be joined.
-
-A visitor browses findings they could share, not models they would have to judge. Each finding
-links to the series behind it and to the project ideas it opens up.
+Every series also has its own page, so a visitor can follow any entry back to the numbers behind it.
 
 ## Positioning
 
-- **Cross-dataset, not per-dataset.** Other tools show one dataset at a time. govML's unit is the
-  relationship between datasets, found across the whole catalog.
-- **Every finding is earned.** A relationship is shown only after it survives detrending,
-  multiple-testing correction and an out-of-sample lag check, and an LLM review has removed pairs
-  that are one quantity counted twice. Coincidences stay out.
+- **Catalog-wide, organised by time.** Other tools show one dataset at a time. govML lines up every
+  series against the calendar, so a policy or a shock shows up as many numbers turning at once.
+- **Automated, and honest about it.** Everything is computed weekly with no editor in the loop. A
+  break is shown only when it clears a strict test. The cause of a cluster is the LLM's guess, and
+  the site labels it as a guess ("likely") or says "unexplained".
 
 ## Operating Context
 
-A public, read-only static site. A weekly batch job on the VPS ingests the catalog, turns tables
-into series, tests relationships, and writes JSON artifacts; the frontend is a static build that
-reads them. There is no always-on backend and no visitor-triggered compute. The per-dataset ML
-pipeline remains as an operator-only tool.
+A public, read-only static site. A weekly batch job on the VPS fetches the catalog, turns tables
+into series, detects breaks, clusters them by date, asks an LLM (through OpenRouter) to name each
+cluster, and writes JSON artifacts. The frontend is a static build that reads those artifacts.
+There is no always-on backend and no compute triggered by visitors. The per-dataset ML pipeline
+remains as an operator-only tool.
 
 ## Capabilities and Constraints
 
-- The front door is the semantic map of all ~4,600 datasets. v1 lights up one theme, housing plus
-  cost of living, and draws verified findings as lines between the datasets they connect.
-- Most SingStat tables put time across the columns and need flipping; most other agencies' tables
-  are already long-form. Both become series. Single-year snapshots (input-output tables, census
-  cross-tabs) are not series and wait for v2's place-based analysis.
-- Units differ between rows of one table, so each series carries its own unit and comparisons work
-  on changes, not levels.
-- Project ideas come in two labelled kinds: verified ones derived from a finding or a tested join,
-  shown first, and brainstormed ones, shown separately.
-- LLM work (the same-quantity review, idea write-ups) goes through OpenRouter with a configurable
+- **Coverage.** The front door is the timeline, by year, drilling into quarters and months. It
+  covers the whole catalog: every table that can become a series. Single-year snapshots, such as
+  input-output tables and census cross-tabs, are not series. They wait for later place-based
+  analysis.
+- **Event pages.** A cluster is several series from several datasets breaking in the same period,
+  so no single table can make an event alone. Each break records its direction, sped up or slowed
+  down.
+- **Series pages.** Every series has a page: its chart, its breaks, its source dataset. Where the
+  LLM reviewer agreed across runs, the page also lists other series it moves with.
+- **Map.** The semantic map of all datasets is a secondary page, not the front door.
+- **Units.** Units differ between rows of one table. Each series carries its own unit, and
+  comparisons work on changes, not levels.
+- **LLM.** LLM work (naming clusters, reviewing pairs) goes through OpenRouter with a configurable
   model.
 
 ## Brand Commitments
 
 The earlier hydrographic-chart identity is retired with the old product. The new identity will be
-shaped with impeccable once v1 has real findings to design around. govML never claims to be an
-official government surface.
+shaped with impeccable once the timeline has real content to design around. govML never claims to
+be an official government surface.
 
 ## Evidence on Hand
 
-- `catalog.db` on the VPS: 4,625 datasets from 75 agencies, all embedded
-  (`text-embedding-3-small`). SingStat is 49% of the catalog; 555 datasets are GeoJSON layers.
-- 1,685 datasets cached as parquet. Of those, about 180 SingStat tables are wide time tables and
-  about 900 other tables are long-form with a time column.
-- The 1,654 per-dataset run verdicts from August 2026 are being deleted: many "good" verdicts were
-  trivial (a table's total predicted from its own parts) or nonsense (day-of-week from a prayer
-  timetable).
+- `catalog.db` on the VPS: 4,625 datasets from 75 agencies, all embedded. SingStat is 49% of the
+  catalog, and 555 datasets are GeoJSON layers.
+- The first full run (`docs/findings-v0.md`) flipped 1,053 cached tables into about 48,600 series.
+  - Pairs across datasets yielded only 2 findings the reviewer kept consistently. Most candidates
+    were one quantity published in several cuts.
+  - 133 series show clear breaks. In housing these line up with known events: the 1997 resale
+    peak, the 2012 to 2013 cooling measures and a shift in car numbers in early 2018.
+  - That result is why the product moved from relationships to a timeline.
 
 ## Product Principles
 
-1. A finding a visitor would share beats ten they would skim. Rank by surprise, cut by rigour.
-2. Never show a relationship the data cannot defend; when in doubt, leave it out.
-3. Precompute everything. A visitor never waits for a model.
-4. The map is for discovery. Clusters, highlighted themes and finding lines carry real signal, not
-   decoration.
+1. **A year page should make someone say "huh, I didn't know that changed then".** Rank clusters
+   by how many independent datasets moved, not by how big one number moved.
+2. **Never show a break the data cannot defend.** Never present a guessed cause as fact.
+3. **Precompute everything.** A visitor never waits for a model.
+4. **Every claim links to its numbers.** Year page to cluster to series to source dataset.
 
 ## v1 is done when
 
-The site is public, the whole-catalog map is live with the housing and cost-of-living theme lit,
-at least 20 verified findings are good enough to share personally, and the weekly batch runs on
-the VPS.
+All of these hold:
+- the whole catalog is fetched;
+- every year with a cluster has a page with a labelled cause guess;
+- every series has a page, and the map page is kept;
+- the weekly batch runs on the VPS;
+- the site is publicly deployed.
