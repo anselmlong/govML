@@ -91,25 +91,3 @@ def bh_adjust(p: np.ndarray) -> np.ndarray:
     out = np.empty(n)
     out[order] = np.minimum(ranked, 1.0)
     return out
-
-
-def sup_f(x: np.ndarray, trim: float = 0.15) -> tuple[float, int, float]:
-    """Andrews sup-F for one mean shift in a series with no NaNs. Returns (supF, index of the
-    first point of the new regime, shift in sd units of x)."""
-    n = x.size
-    lo, hi = int(np.ceil(trim * n)), int(np.floor((1 - trim) * n))
-    if hi <= lo or np.var(x) <= 0:
-        return 0.0, -1, 0.0
-    total = x.sum()
-    ssr0 = ((x - x.mean()) ** 2).sum()
-    cs = np.cumsum(x)
-    tau = np.arange(lo, hi + 1)
-    s1 = cs[tau - 1]
-    n1, n2 = tau.astype(float), (n - tau).astype(float)
-    gain = s1 * s1 / n1 + (total - s1) ** 2 / n2 - total * total / n
-    ssr1 = ssr0 - gain
-    f = gain / (ssr1 / (n - 2))
-    best = int(np.argmax(f))
-    t = int(tau[best])
-    delta = (x[t:].mean() - x[:t].mean()) / x.std()
-    return float(f[best]), t, float(delta)

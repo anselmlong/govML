@@ -49,7 +49,7 @@ def render_store(store: Path, top_breaks: int) -> list[str]:
         f"## Store `{store}`", "",
         f"{coverage['matched_tables']} of {coverage['tables']} tables became {coverage['series']:,} series. "
         f"The statistical gate passed {len(candidates)} candidates; the top {reviewed} were reviewed and "
-        f"{len(kept)} kept. {len(breaks)} series have a break above the 1% sup-F critical value.", "",
+        f"{len(kept)} kept. {len(breaks)} series have a break at p <= 0.01.", "",
         "### Kept findings", "",
     ]
     if not kept:
@@ -66,12 +66,13 @@ def render_store(store: Path, top_breaks: int) -> list[str]:
             f"- reviewer: {f.get('rationale', '')}", "",
         ]
     out += ["### Reviewed and dropped", "", *dropped_table(dropped)]
-    out += ["", f"### Strongest breaks (top {top_breaks} by sup-F)", "",
-            "| series | period | sup-F | shift (sd) | note |", "|---|---|---|---|---|"]
-    for b in sorted(breaks, key=lambda b: -b["supF"])[:top_breaks]:
+    out += ["", f"### Strongest breaks (top {top_breaks} by p, then statistic)", "",
+            "| series | period | direction | shift (sd) | p | note |", "|---|---|---|---|---|---|"]
+    for b in sorted(breaks, key=lambda b: (b["p"], -b["statistic"]))[:top_breaks]:
         n = notes.get((b["series_id"], b["period"]))
         note = f"{n['confidence']}: {n['note']}" if n else ""
-        out.append(f"| {_cell(_short(b['label'], 80))} | {b['period']} | {b['supF']:.1f} | {b['delta']:+.2f} | {_cell(note)} |")
+        out.append(f"| {_cell(_short(b['label'], 80))} | {b['period']} | {b['direction']} | {b['size']:.2f} "
+                   f"| {b['p']:.3f} | {_cell(note)} |")
     return out + [""]
 
 

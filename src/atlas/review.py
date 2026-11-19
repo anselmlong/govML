@@ -88,7 +88,8 @@ Reply with a single JSON object and nothing else, with exactly these keys:
 
 BREAKS_SYSTEM = """\
 You annotate structural breaks detected in Singapore government time series. For each break you are
-given the series, the period the test flagged, the size of the shift (delta) and a few values around it.
+given the series, the period the test flagged, whether growth sped up or slowed (direction), the mean
+change per period before and after, the shift in standard deviations (size) and a few values around it.
 
 For each break write one short note (one sentence) guessing which well-known event might coincide with it,
 for example COVID-19 in 2020, property cooling measures, GST rate changes, or a change in how the series
@@ -330,12 +331,12 @@ def build_review_prompt(cand: dict, metas: dict, points: dict[str, dict[str, flo
 
 
 def top_breaks(breaks: pd.DataFrame, n: int) -> pd.DataFrame:
-    """The strongest break per series (supF over its 1% critical value), strongest series first."""
+    """The n strongest breaks of distinct quantities: lowest p first, then the largest statistic."""
     if breaks.empty:
         return breaks
-    b = breaks.assign(strength=breaks["supF"] / breaks["crit_1pct"])
-    b = b.sort_values("strength", ascending=False).drop_duplicates("series_id")
-    return b.head(n).drop(columns="strength").reset_index(drop=True)
+    b = breaks[breaks["duplicate_of"].isna()]
+    b = b.sort_values(["p", "statistic", "series_id"], ascending=[True, False, True], kind="stable")
+    return b.head(n).reset_index(drop=True)
 
 
 def build_breaks_prompt(top: pd.DataFrame, metas: dict, points: dict[str, dict[str, float]],
@@ -350,7 +351,8 @@ def build_breaks_prompt(top: pd.DataFrame, metas: dict, points: dict[str, dict[s
         items.append({
             "series_id": r.series_id, "label": m["label"], "unit": m["unit"] or None, "freq": m["freq"],
             "dataset": dataset_names.get(m["dataset_id"]) or m["dataset_id"], "break_period": r.period,
-            "supF": _num(r.supF), "crit_1pct": _num(r.crit_1pct), "delta": _num(r.delta),
+            "direction": r.direction, "before": _num(r.before), "after": _num(r.after), "size": _num(r.size),
+            "p": _num(r.p),
             "values_around_break": _excerpt(pts, window),
         })
     return "Breaks to annotate:\n" + json.dumps(items, ensure_ascii=False, indent=1)

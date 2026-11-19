@@ -1,5 +1,5 @@
-"""Findings engine: co-movement and lead/lag candidates between series of different tables, and
-structural breaks within one series.
+"""Findings engine: co-movement and lead/lag candidates between series of different tables.
+Breaks within one series live in `breaks.py`.
 
     python -m src.atlas.findings --store atlas/housing_col --catalog catalog.db --out atlas/housing_col
 
@@ -42,9 +42,6 @@ class Config:
     dup_corr: float = 0.98
     covid_years: tuple[int, int] = (2020, 2022)
     min_stability: float = 0.5
-    trim: float = 0.15
-    break_crit: float = 12.16
-    min_break_points: int = 20
 
 
 def period_index(freq: str, period: str) -> int:
@@ -81,13 +78,14 @@ def to_grid(s: Series) -> Grid:
     return Grid(s.freq, int(idx[0]), values)
 
 
-def to_quarterly(g: Grid) -> Grid:
-    """Monthly levels to quarterly means. A quarter missing any month stays empty, so a partial
-    quarter can't bias the mean."""
-    q0, q1 = g.start // 3, g.end // 3
-    padded = np.full((q1 - q0 + 1) * 3, np.nan)
-    padded[g.start - q0 * 3: g.start - q0 * 3 + g.values.size] = g.values
-    return Grid("Q", q0, padded.reshape(-1, 3).mean(axis=1))
+def coarsen(g: Grid, freq: str) -> Grid:
+    """Levels to means over a coarser frequency (M to Q, Q to A, ...). A coarse period missing
+    any sub-period stays empty, so a partial quarter or year can't bias the mean."""
+    k = PER_YEAR[g.freq] // PER_YEAR[freq]
+    q0, q1 = g.start // k, g.end // k
+    padded = np.full((q1 - q0 + 1) * k, np.nan)
+    padded[g.start - q0 * k: g.start - q0 * k + g.values.size] = g.values
+    return Grid(freq, q0, padded.reshape(-1, k).mean(axis=1))
 
 
 HEADLINE = re.compile(r"^(total|overall|all|whole)\b|\boverall items\b", re.I)
@@ -208,7 +206,7 @@ class View:
 def make_view(s: Series, freq: str) -> View:
     g = to_grid(s)
     if g.freq != freq:
-        g = to_quarterly(g)
+        g = coarsen(g, freq)
     changes, kind = stats.transform(g.values)
     return View(s, freq, g.start + 1, changes, kind)
 
@@ -219,7 +217,7 @@ def _on(v: View, lo: int, size: int) -> np.ndarray:
     return out
 
 
-def _deseason(x: np.ndarray, season: np.ndarray, fit: np.ndarray, per_year: int) -> np.ndarray:
+def deseason(x: np.ndarray, season: np.ndarray, fit: np.ndarray, per_year: int) -> np.ndarray:
     """Subtract each month's or quarter's mean, fitted on the positions in `fit` only."""
     out = x.copy()
     for k in range(per_year):
@@ -257,8 +255,8 @@ def full_span_r(vx: View, vy: View, min_overlap: int) -> float:
     if vx.freq in ("M", "Q"):
         pos = np.arange(X.size)
         season, overlap = (lo + pos) % PER_YEAR[vx.freq], (pos >= both[0]) & (pos <= both[-1])
-        X = _deseason(X, season, overlap, PER_YEAR[vx.freq])
-        Y = _deseason(Y, season, overlap, PER_YEAR[vx.freq])
+        X = deseason(X, season, overlap, PER_YEAR[vx.freq])
+        Y = deseason(Y, season, overlap, PER_YEAR[vx.freq])
     return stats.pearson(X[both], Y[both])
 
 
@@ -275,8 +273,8 @@ def evaluate_pair(vx: View, vy: View, cfg: Config) -> dict | str:
     fit = (pos >= both[0]) & (pos <= split)
     if freq in ("M", "Q"):
         season = (lo + pos) % PER_YEAR[freq]
-        X = _deseason(X, season, fit, PER_YEAR[freq])
-        Y = _deseason(Y, season, fit, PER_YEAR[freq])
+        X = deseason(X, season, fit, PER_YEAR[freq])
+        Y = deseason(Y, season, fit, PER_YEAR[freq])
 
     L = cfg.max_lag[freq]
     best = None
@@ -328,7 +326,6 @@ def evaluate_pair(vx: View, vy: View, cfg: Config) -> dict | str:
 @dataclass
 class Findings:
     candidates: pd.DataFrame
-    breaks: pd.DataFrame
     tested: pd.DataFrame
     report: dict
 
@@ -465,9 +462,7 @@ def find(series: list[Series], names: dict[str, str], cfg: Config = Config()) ->
     report["killed"] = dict(sorted(killed.items()))
     report["surviving"] = len(cands)
     report["by_kind"] = dict(sorted(Counter(cands["kind"]).items()))
-    breaks = find_breaks([s for s in reps if s.series_id not in duplicates], names, cfg)
-    report["breaks"] = {"series_tested": breaks.attrs["tested"], "clearing_crit": len(breaks), "crit": cfg.break_crit}
-    return Findings(cands, breaks, tested, report)
+    return Findings(cands, tested, report)
 
 
 CANDIDATE_COLUMNS = [
@@ -475,7 +470,6 @@ CANDIDATE_COLUMNS = [
     "r_train", "r_test", "p_test", "p_test_adj", "r_test_spearman", "r_ex_covid", "n_ex_covid",
     "span", "transform", "name_overlap", "score",
 ]
-BREAK_COLUMNS = ["series_id", "label", "freq", "period", "supF", "crit_1pct", "delta", "n"]
 
 
 def label(s: Series, names: dict[str, str]) -> str:
@@ -486,34 +480,7 @@ def label(s: Series, names: dict[str, str]) -> str:
     return f"{head}: {' / '.join(parts)}" if parts else head
 
 
-def find_breaks(reps: list[Series], names: dict[str, str], cfg: Config) -> pd.DataFrame:
-    """sup-F for one mean shift in each representative's transformed values. Descriptive: not
-    a corrected family."""
-    rows, tested = [], 0
-    for s in sorted(reps, key=lambda s: s.series_id):
-        v = make_view(s, s.freq)
-        x = v.values
-        if stats.is_flat(x):
-            continue
-        if s.freq in ("M", "Q"):
-            season = (v.start + np.arange(x.size)) % PER_YEAR[s.freq]
-            x = _deseason(x, season, np.ones(x.size, bool), PER_YEAR[s.freq])
-        pos = np.flatnonzero(~np.isnan(x))
-        if pos.size < cfg.min_break_points:
-            continue
-        tested += 1
-        f, t, delta = stats.sup_f(x[pos], cfg.trim)
-        if f >= cfg.break_crit:
-            rows.append({"series_id": s.series_id, "label": label(s, names), "freq": s.freq,
-                         "period": index_period(s.freq, v.start + int(pos[t])), "supF": f,
-                         "crit_1pct": cfg.break_crit, "delta": delta, "n": int(pos.size)})
-    out = pd.DataFrame(rows, columns=BREAK_COLUMNS)
-    out = out.sort_values(["supF", "series_id"], ascending=[False, True], kind="stable").reset_index(drop=True)
-    out.attrs["tested"] = tested
-    return out
-
-
-def _json_records(df: pd.DataFrame) -> str:
+def json_records(df: pd.DataFrame) -> str:
     records = [{k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in r.items()}
                for r in df.to_dict(orient="records")]
     return json.dumps(records, ensure_ascii=False, sort_keys=True, indent=1, default=float) + "\n"
@@ -521,11 +488,8 @@ def _json_records(df: pd.DataFrame) -> str:
 
 def write(findings: Findings, out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    for stem, df in (("candidates", findings.candidates), ("breaks", findings.breaks)):
-        df = df.copy()
-        df.attrs = {}
-        df.to_parquet(out / f"{stem}.parquet", index=False)
-        (out / f"{stem}.json").write_text(_json_records(df))
+    findings.candidates.to_parquet(out / "candidates.parquet", index=False)
+    (out / "candidates.json").write_text(json_records(findings.candidates))
 
 
 def print_report(f: Findings) -> None:
@@ -542,8 +506,6 @@ def print_report(f: Findings) -> None:
               f"{r['detectable_r_at_median_n_eff']:.3f} at median n_eff")
     print("killed:", ", ".join(f"{k} {v}" for k, v in r["killed"].items()) or "none")
     print(f"surviving: {r['surviving']}  by kind: {r['by_kind']}")
-    b = r["breaks"]
-    print(f"breaks: {b['clearing_crit']} of {b['series_tested']} series clear supF {b['crit']}")
 
 
 def main(argv: list[str] | None = None) -> int:

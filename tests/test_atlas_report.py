@@ -16,7 +16,8 @@ def test_report_shows_kept_dropped_and_annotated_breaks(tmp_path):
                            "caveats": ["Short sample."], "ideas": [{"title": "Tracker", "description": "Use X.", "kind": "verified"}],
                            "rationale": "Distinct markets."}],
         "dropped.json": [{**CAND, "drop_reason": "component_of_total", "rationale": "Y is | part of X."}],
-        "breaks.json": [{"series_id": "a:x", "label": "A: x", "period": "2013Q1", "supF": 40.0, "delta": -1.2}],
+        "breaks.json": [{"series_id": "a:x", "label": "A: x", "period": "2013Q1", "statistic": 40.0, "p": 0.002,
+                         "direction": "slowed", "size": 1.2}],
         "break_notes.json": [{"series_id": "a:x", "period": "2013Q1", "note": "Cooling measures.", "confidence": "guess"}],
     }
     for name, body in files.items():
@@ -28,7 +29,7 @@ def test_report_shows_kept_dropped_and_annotated_breaks(tmp_path):
     assert "**X tends to move before Y.**" in text and "x leads by 1 Q" in text
     assert "idea (verified): Tracker" in text
     assert "Y is \\| part of X." in text
-    assert "| 2013Q1 | 40.0 | -1.20 | guess: Cooling measures. |" in text
+    assert "| 2013Q1 | slowed | 1.20 | 0.002 | guess: Cooling measures. |" in text
 
 
 def test_an_archived_dropped_file_renders_as_an_appendix(tmp_path):

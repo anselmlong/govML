@@ -85,18 +85,6 @@ def test_a_pair_linked_only_by_a_shared_2020_shock_is_killed_by_the_covid_gate()
     assert t.status == "rule5_covid" and f.candidates.empty
 
 
-def test_a_planted_mean_shift_is_reported_as_a_break_near_its_period():
-    rng = np.random.default_rng(5)
-    changes = rng.normal(0, 0.01, 240)
-    changes[150:] += 0.015
-    s = monthly("d_shift", changes)
-    f = find([s], {"d_shift": "Shifted Index, Monthly"})
-    (b,) = f.breaks.itertuples()
-    true_period = format_period("M", 2005 + 151 // 12, 151 % 12 + 1)
-    gap = abs((int(b.period[:4]) * 12 + int(b.period[5:])) - (int(true_period[:4]) * 12 + int(true_period[5:])))
-    assert b.supF > b.crit_1pct and gap <= 6 and b.delta > 0
-
-
 def test_cli_output_is_byte_identical_across_runs(tmp_path, capsys):
     rng = np.random.default_rng(6)
     x = rng.normal(0, 0.01, 203)
@@ -109,7 +97,7 @@ def test_cli_output_is_byte_identical_across_runs(tmp_path, capsys):
                      "--out", str(tmp_path / run)]) == 0
         digests.append({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((tmp_path / run).iterdir())})
     assert digests[0] == digests[1]
-    assert set(digests[0]) == {"candidates.parquet", "candidates.json", "breaks.parquet", "breaks.json"}
+    assert set(digests[0]) == {"candidates.parquet", "candidates.json"}
     printed = capsys.readouterr().out
     assert "family size F" in printed and "smallest detectable |r|" in printed
     assert json.loads((tmp_path / "a" / "candidates.json").read_text())[0]["kind"] == "lead"
@@ -145,7 +133,6 @@ def test_real_theme_subset_obeys_every_rule():
     assert (c["p_test_adj"] < cfg.q).all() and (c["r_test"].abs() >= cfg.min_abs_r).all()
     assert (np.sign(c["r_train"]) == np.sign(c["r_test"])).all() and (c["lag"] >= 0).all()
     assert list(c["score"]) == sorted(c["score"], reverse=True)
-    assert (f.breaks["supF"] >= cfg.break_crit).all() and f.breaks["series_id"].is_unique
 
 
 def test_a_link_that_only_appears_in_the_test_window_is_killed_as_an_episode():

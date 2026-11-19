@@ -62,8 +62,10 @@ Code: `src/atlas/findings.py` (pipeline, rules, CLI) and `src/atlas/stats.py` (n
 
     python -m src.atlas.findings --store atlas/housing_col --catalog catalog.db --out atlas/housing_col
 
-It reads the theme store and writes `candidates.parquet`/`.json` and `breaks.parquet`/`.json` next
-to it. Dataset names come from `catalog.db`. The theme JSON names some datasets only by id.
+It reads the theme store and writes `candidates.parquet`/`.json` next to it. Breaks moved to
+phase 6 (`src/atlas/breaks.py`). A store whose `breaks.*` files were written by the phase 3
+code has the old columns, and `review.py` and `report.py` fail on them until `breaks.py` has
+rerun there. Dataset names come from `catalog.db`. The theme JSON names some datasets only by id.
 
 ```
 Candidate
@@ -79,9 +81,6 @@ Candidate
   transform    "dlog" | "diff" (or "dlog/diff" when the two differ)
   name_overlap token Jaccard between the two dataset names (0..1)
   score
-Break   (descriptive annotation, not a corrected family)
-  series_id, label, freq, period (first period of the new regime), supF, crit_1pct,
-  delta (mean shift in sd units of the transformed series), n
 ```
 
 Units vary between rows of one table, so the engine only ever works on changes, never levels.
@@ -151,10 +150,9 @@ Units vary between rows of one table, so the engine only ever works on changes, 
 6a. **One per dataset pair.** After ranking, only the best candidate for each unordered pair of
    datasets is kept (`rule6_same_dataset_pair`). Arrivals, departures and total from one table
    otherwise repeat a finding three times.
-6. **Breaks.** These are descriptive. Each representative left after rule 2 gets a sup-F test,
-   at any frequency, provided it has at least 20 transformed points. The test looks for one mean
-   shift in the deseasoned changes, with 15% trimming and iid residual variance, against
-   Andrews' 1% critical value of 12.16. Each series keeps its top break if it clears.
+6. **Breaks.** Replaced by phase 6. The first version ran an iid sup-F on representatives
+   against Andrews' 1% value of 12.16. On AR(1) series with phi 0.5 and no break it rejects
+   26 to 32% of the time, so most of its breaks were serial correlation.
 7. **Score.** |r_test| × (1 - name_overlap) × min(1, n_test / 20), descending, with ties broken
    by x, y, lag.
 8. **Determinism.** There is no randomness. Pairs are visited in series-id order, every sort is
@@ -202,6 +200,184 @@ prices lead industrial rents by one quarter. New launches move with sales by mar
 Housing pairs mostly fail on power. Phase 4 still has to judge same-quantity pairs that no name
 rule can see.
 
+### Breaks (phase 6)
+
+Code: `src/atlas/breaks.py`. Run
+
+    python -m src.atlas.breaks --store atlas/all --catalog catalog.db --out atlas/all --workers 8
+    python -m src.atlas.breaks --simulate --workers 8      # the size and power tables below
+
+It writes `breaks.parquet`/`.json` (one row per break), `break_tests.parquet` (one row per series:
+`tested`, `too_short` or `flat`, with the best date, statistic and p even when p is large) and
+`breaks_report.json` (the printed counts and the by-year table).
+
+```
+Break
+  series_id, dataset_id, label
+  family        table_key(dataset name), the rule 2 publication key
+  freq, period  first period of the new regime
+  direction     "accelerated" | "slowed": the mean change per period went up or down
+  size          |shift| / within-regime sd of the deseasoned changes
+  before, after mean change per period in `transform` units (dlog ~ growth rate)
+  transform     "dlog" | "diff"
+  statistic, p  sup-Wald and its bootstrap p (999 draws, so p >= 0.001)
+  n             changes tested
+  duplicate_of  series_id of the kept copy, or None
+```
+
+#### What a break is
+
+A break is one shift in the mean of a series' changes. In levels that is a kink: growth sped up or
+slowed down and stayed that way. A reader calls this "changed course". Levels after detrending
+were rejected for three reasons:
+- A jump in levels is a single spike in changes. Most of those spikes are rebasing, a definition
+  change or a splice of two tables. With no human check, they would be the bulk of the timeline.
+- Units differ between rows, and changes are what phase 3 already compares.
+- A one-off shock that recovers, such as the 2008-09 dip or the 2020 drop and rebound, also
+  shows up as spikes in changes and not as a mean shift. So the timeline misses V-shaped shocks
+  by construction. A separate "shock" kind would need its own outlier test, and that is
+  out of scope for v1.
+
+#### The test
+
+1. Take the longest gap-free run of changes (dlog when every level is positive, else first
+   difference). Subtract month or quarter means. Skip a series as `too_short` below 30 changes
+   or as `flat` when `stats.is_flat` holds.
+2. For every break index with at least max(15% of n, 5) changes on each side, compute the Wald
+   statistic for a mean shift. The variance is an AR(1)-prewhitened long-run variance of the
+   residuals under that break. The statistic is the maximum over break indices. Studentising by
+   the long-run variance keeps the statistic close to pivotal in phi.
+3. Calibrate it with a wild AR sieve bootstrap: 999 series drawn from an AR(p) fitted to the
+   demeaned changes, which is the null of no break. p runs from 1 to the frequency's cap
+   (A 1, H 2, Q 4, M 12) and n/10, chosen by AIC. AR(1) gets Kendall's bias correction and roots
+   are kept inside 0.97. Residuals keep their period and get a random sign. Every draw is
+   deseasoned the same way as the data. p = (1 + #draws >= observed) / 1000. A break is
+   reported at p <= 0.01. The rng is seeded from crc32(series_id), so each p depends only on
+   its own series, whatever the worker count or the rest of the store.
+
+Variants that failed in `--simulate`-style prototypes:
+- The phase 3 iid sup-F against 12.16 rejects 26 to 32% at phi 0.5 and 63 to 84% at phi 0.8.
+- The HAC statistic against Andrews' 12.16, with no bootstrap, rejects 4 to 25% at n 30 and
+  3 to 8% at n 60.
+- The sieve fitted to residuals under the alternative rejects 5 to 17% at n 30 with phi 0.5 to
+  0.8, because a sup-chosen break soaks up persistence.
+- The iid statistic with a null-fitted sieve holds size but loses most power, because a real
+  break inflates phi under the null.
+- An iid (not wild) residual resample rejects 5 to 8% when the first third of the series has 3x
+  the sd. The wild draw holds 0.8 to 1.2% there.
+
+#### Size and power
+
+Rejection rate at p <= 0.01 on AR(1) series with unit innovations. Size rows use 2,000 series per
+cell and power rows use 400. Shifts are in marginal sd, at the middle. The ±2 column is the share of
+detected breaks dated within 2 periods of the truth.
+
+| n | size phi 0 / 0.5 / 0.8 | size, monthly style | 1 sd power | 2 sd power | 2 sd dated within ±2 |
+|---|---|---|---|---|---|
+| 15 | .007 / .010 / .011 | | .02 / .01 / .03 | .09 / .05 / .06 | 1.0 / 1.0 / 1.0 |
+| 20 | .009 / .005 / .010 | | .06 / .01 / .01 | .16 / .03 / .03 | .92 / 1.0 / 1.0 |
+| 25 | .008 / .005 / .005 | | .10 / .01 / .00 | .34 / .04 / .02 | .96 / .88 / .86 |
+| 30 | .011 / .005 / .007 | | .16 / .02 / .02 | .53 / .05 / .02 | .96 / .83 / 1.0 |
+| 60 | .010 / .014 / .010 | .004 / .005 / .004 | .63 / .10 / .02 | 1.0 / .39 / .05 | .95 / .81 / .78 |
+| 150 | .014 / .009 / .009 | .012 / .003 / .005 | 1.0 / .57 / .08 | 1.0 / .99 / .34 | .95 / .79 / .70 |
+| 300 | .011 / .009 / .011 | .006 / .006 / .007 | 1.0 / .95 / .28 | 1.0 / 1.0 / .90 | .95 / .80 / .65 |
+
+The monthly-style column fits 12 season means and AR orders up to 12. A shift planted a quarter
+of the way in has a little less power from n 60 up (2 sd: .99 / .25 / .03 at n 60). At n 15 it is undetectable, because the
+minimum segment is 5. MA(1) changes with theta -0.5 to -0.95, which are trend-stationary
+levels, reject at most 0.5%.
+
+Power at phi 0.8 looks low, but it is at the ceiling. A test told the true phi reaches 0.08 at
+n 150 and 0.27 at n 300 for 1 sd with this statistic. A 1 sd shift at phi 0.8 is a third of a
+long-run sd. The iid-statistic version of that oracle reaches 0.19 and 0.44, but no test can
+match it without knowing phi. Below 30 changes, power is under 0.35 even for a 2 sd shift. On
+the real store, series with 15 to 29 changes broke at 0.8 to 1.3%, which is the null rate.
+Series with 30 or more broke at 2.8%. That is why `min_changes` is 30.
+
+#### One break
+
+v1 reports at most one break per series. A second break buys no power on these series. On the
+HDB resale price index, the best 5-regime fit still leaves residual phi 0.41, against 0.68 with
+no break. On the private residential index the figures are 0.54 against 0.69. The swings are
+persistence, not clean regimes, and an AR null explains them with or without more breaks.
+
+#### De-duplication
+
+All series are tested, not only representatives. Then breaks are de-duplicated, not series:
+comparing every pair in the store would mean about 10^9 pairs. Two breaks are one quantity when
+both conditions hold:
+- their dates are within a year of each other;
+- their changes correlate above 0.98, compared at the coarser of the two frequencies, over at
+  least 10 shared periods, with season means fitted on the overlap (rule 2's `full_span_r`).
+
+Each connected group keeps the finest frequency, then the most points, then the smallest id.
+The others carry `duplicate_of`. Different cuts of one table that are not copies stay apart:
+the 9 age bands of one qualification table that broke in 2001 are 9 breaks. Phase 7 should count families, not
+series or datasets. Even `family` overcounts, because `table_key` does not merge male, female
+and total versions of one labour-force table.
+
+#### Numbers from the whole-catalog store
+
+The store has 48,637 series from 1,053 tables.
+- **Tested.** 12,692 series (A 5,218, M 4,101, Q 3,373). Skipped 35,945: 35,329 too short,
+  616 flat.
+- **Breaks.** 357 at p <= 0.01 (A 229, M 96, Q 32), a rate of 2.8%. After de-duplication 256,
+  from 86 datasets and 65 families.
+- **Expected false positives.** At most 127 (1% of tested). At stricter cuts the counts are 263
+  at p <= 0.005 and 143 at p <= 0.002.
+- **Shape.** 17.4% are dated at a trim edge. 281 slowed and 76 accelerated.
+- **Runtime.** 18.6 s for the test on 8 workers (54 s on 1), 23 s wall including reading the
+  store.
+
+By year, the de-duplicated count is set against `expected_null`: alpha spread evenly over each
+tested series' window of possible break dates. The 15 years with the most distinct datasets:
+
+| year | breaks | deduped | datasets | families | exposed series | expected_null |
+|---|---|---|---|---|---|---|
+| 1997 | 27 | 17 | 11 | 11 | 7,373 | 2.8 |
+| 2001 | 28 | 17 | 8 | 8 | 8,030 | 3.1 |
+| 1999 | 17 | 15 | 8 | 8 | 7,411 | 2.7 |
+| 2004 | 16 | 12 | 8 | 8 | 8,432 | 3.4 |
+| 1995 | 10 | 8 | 8 | 8 | 5,843 | 2.1 |
+| 1982 | 11 | 8 | 8 | 5 | 1,006 | 0.3 |
+| 2005 | 11 | 8 | 7 | 7 | 8,431 | 3.2 |
+| 2014 | 9 | 7 | 7 | 7 | 10,957 | 7.2 |
+| 2011 | 12 | 9 | 7 | 6 | 10,175 | 4.5 |
+| 2000 | 9 | 8 | 6 | 6 | 7,682 | 2.8 |
+| 2012 | 13 | 7 | 6 | 6 | 10,337 | 5.0 |
+| 2015 | 7 | 6 | 6 | 6 | 10,754 | 6.6 |
+| 1991 | 10 | 8 | 5 | 5 | 4,905 | 1.7 |
+| 1989 | 7 | 5 | 5 | 5 | 3,909 | 1.1 |
+| 2017 | 6 | 5 | 5 | 5 | 9,609 | 4.4 |
+
+How these peaks read:
+- **1997.** 6 of 17 are age bands of one qualification table. The rest are mostly population
+  and labour-force age bands, where a cohort moving through a band changes its growth. That is
+  demography, not an event. Foreign reserves (1997-04) and merchandise exports (1997-09)
+  slowing fit the Asian financial crisis.
+- **1999, 2001, 2004.** These are dominated by the same census-style tables: qualification,
+  marital status and labour force by age. 2001 also has internet dial-up and mobile
+  subscriptions slowing, which is plausibly real saturation. These peaks look like cohort and
+  table artefacts.
+- **1982.** Six of the eight are SingStat price indices (import, domestic supply, manufactured
+  products) slowing together after the 1979-81 inflation. Exposure is only 1,006 series, and 1982 sits
+  near the start of their window, so it is plausible but edge-prone.
+- **2020.** Retail sales sub-indices "accelerate" from 2020-05/06. That is the rebound after
+  the circuit breaker, not a lasting change. 2008-09 barely registers: 2008 has 3 de-duplicated
+  breaks against 3.9 expected, and 2009 has 8 against 4.4. Both V-shaped shocks are what this
+  design does not see.
+- **2011 to 2017.** These years sit at or near `expected_null` and are indistinguishable from
+  noise.
+
+#### For phase 7
+
+At p <= 0.01, about a third of the de-duplicated breaks may be noise. In high-exposure years the
+null alone supplies 4 to 7 breaks. A fixed "5 series from 3 datasets" bar is met by noise in some
+years, so calibrate the cluster bar against `expected_null`. Count families, and merge
+sex/total splits first. `break_tests.parquet` holds the best date and p for every tested series,
+not only for breaks. That is enough for a pooled test of whether break dates bunch in a year
+beyond chance, which can find events that no single series defends.
+
 ## Phases
 
 Phases 1 to 4 ran on 2026-11-19 (results: `docs/findings-v0.md`). The product then moved from
@@ -214,9 +390,9 @@ cross-dataset relationships to a timeline (see `PRODUCT.md`). Phases 5 onward ar
 5. **Whole-catalog fetch.** Fetch every tabular dataset not yet cached. Big tables go through the
    bulk `poll-download` endpoint, and the paged API is not used for deep pages. Flip everything and
    report coverage.
-6. **Strict breaks.** Replace the iid sup-F with a test that holds up on autocorrelated series,
-   such as a HAC variance or a block bootstrap. Record each break's direction and size. Then
-   check the rate on synthetic series with no break.
+6. **Strict breaks.** Done (see "Breaks (phase 6)"). A long-run-variance sup-Wald with a wild AR
+   sieve bootstrap holds 1% size on AR(1) series. On the whole store it finds 357 breaks in
+   12,692 tested series, 256 after de-duplication.
 7. **Clusters.** Group breaks by period. A cluster needs at least 5 series from at least 3
    datasets; tune these numbers on the full data and log the choice. Rank clusters by the number of
    independent datasets. Annual breaks sit at the year level, and finer ones drill down.

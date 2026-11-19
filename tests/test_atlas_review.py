@@ -57,8 +57,13 @@ def make_store(tmp_path, n_cands=3):
                   for s in ids]).to_parquet(tmp_path / "series_meta.parquet")
     pd.DataFrame([{"series_id": s, "period": p, "value": float(j) + k} for k, s in enumerate(ids)
                   for j, p in enumerate(PERIODS)]).to_parquet(tmp_path / "series_points.parquet")
-    pd.DataFrame([{"series_id": "d2:b", "period": "2020-04", "supF": 30.0, "crit_1pct": 12.0, "delta": -5.0},
-                  {"series_id": "d1:a0", "period": "2021-07", "supF": 14.0, "crit_1pct": 12.0, "delta": 2.0}]
+    common = {"before": 0.01, "after": 0.02, "duplicate_of": None}
+    pd.DataFrame([{"series_id": "d2:b", "period": "2020-04", "statistic": 30.0, "p": 0.001, "direction": "slowed",
+                   "size": 5.0, **common},
+                  {"series_id": "d1:a0", "period": "2021-07", "statistic": 14.0, "p": 0.004, "direction": "accelerated",
+                   "size": 2.0, **common},
+                  {"series_id": "d1:a1", "period": "2021-07", "statistic": 40.0, "p": 0.001, "direction": "accelerated",
+                   "size": 2.0, **{**common, "duplicate_of": "d1:a0"}}]
                  ).to_parquet(tmp_path / "breaks.parquet")
     return tmp_path
 
