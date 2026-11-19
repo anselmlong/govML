@@ -393,9 +393,17 @@ cross-dataset relationships to a timeline (see `PRODUCT.md`). Phases 5 onward ar
 6. **Strict breaks.** Done (see "Breaks (phase 6)"). A long-run-variance sup-Wald with a wild AR
    sieve bootstrap holds 1% size on AR(1) series. On the whole store it finds 357 breaks in
    12,692 tested series, 256 after de-duplication.
-7. **Clusters.** Group breaks by period. A cluster needs at least 5 series from at least 3
-   datasets; tune these numbers on the full data and log the choice. Rank clusters by the number of
-   independent datasets. Annual breaks sit at the year level, and finer ones drill down.
+7. **Shocks and clusters.** These lead the year pages.
+   - **Detection.** A series shocks in a period when its deseasoned change is at least 4 robust sd
+     (MAD).
+   - **Shocked table family.** A table family (copies collapsed by the phase 3 table key) counts as
+     shocked when at least half its series shock that quarter.
+   - **Test.** Compare the count against a null that circularly shifts each series' shock dates,
+     family-wise across quarters.
+   - **Prototype.** On the first store, 2020Q1 to Q3, 1998Q3 and 2009Q1 clear the 99% family-wise
+     bar. 2000Q3 does too, but it looks like a labour-force revision.
+   - **Turns.** Turns from phase 6 are listed under the year as secondary.
+
 8. **Cause guesses.** An OpenRouter LLM names each cluster. It is shown as "likely ..." or
    "unexplained", and is never stated as fact. Replies are cached.
 9. **Artifacts and weekly batch.** Static JSON for:

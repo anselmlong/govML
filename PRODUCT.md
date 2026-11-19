@@ -15,8 +15,10 @@ to look for one.
 ## Product Purpose
 
 govML is a **timeline of Singapore in numbers**. It reads all of data.gov.sg as one body of
-**series** (a number over time, such as monthly resale prices or quarterly job vacancies), finds the
-moments each series changed course, and groups those moments by date. A year page answers: what
+**series** (a number over time, such as monthly resale prices or quarterly job vacancies). It finds
+the quarters when many independent datasets were hit at once (**shocks**, such as COVID, the 1998
+Asian crisis or the 2009 financial crisis), and the moments single series lastingly changed course
+(**turns**). A year page answers: what
 changed in Singapore that year, across every number the government publishes, and what probably
 caused it.
 
@@ -44,9 +46,11 @@ remains as an operator-only tool.
   covers the whole catalog: every table that can become a series. Single-year snapshots, such as
   input-output tables and census cross-tabs, are not series. They wait for later place-based
   analysis.
-- **Event pages.** A cluster is several series from several datasets breaking in the same period,
-  so no single table can make an event alone. Each break records its direction, sped up or slowed
-  down.
+- **Event pages.** Shocks lead each year page. A shock is a quarter in which more datasets than
+  chance would allow had most of their series jump. It is tested against a null that shifts each
+  series' dates, family-wise across all quarters, and copies of one table count once. Turns (lasting
+  breaks from a size-correct test) follow as a quieter "also changed course" list, each with its
+  direction, sped up or slowed down.
 - **Series pages.** Every series has a page: its chart, its breaks, its source dataset. Where the
   LLM reviewer agreed across runs, the page also lists other series it moves with.
 - **Map.** The semantic map of all datasets is a secondary page, not the front door.
