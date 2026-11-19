@@ -16,7 +16,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from .periods import FINENESS, combine_year_month, parse_header, parse_time_values
+from .periods import FINENESS, combine_year_month, parse_header, parse_time_values, quarters_dated_by_month
 from .series import Freq, Series, make_series_id
 from .units import split_label_unit, unit_from_dataset_name, unit_from_text
 
@@ -400,5 +400,6 @@ def flip(table: Table, readers: tuple[Reader, ...] = READERS) -> Matched | Unmat
         if not series:
             return Unmatched(table.dataset_id, "no_series_survived",
                              ", ".join(f"{k}={v}" for k, v in sorted(skipped.items())) or "no rows with values")
+        series = [quarters_dated_by_month(s) for s in series]
         return Matched(table.dataset_id, reader.name, tuple(_unique_ids(series)), dict(skipped))
     return explain_unmatched(table)

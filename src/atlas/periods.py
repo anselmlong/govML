@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 import pandas as pd
 
-from .series import Freq, format_period
+from .series import Freq, Series, format_period
 
 MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -101,3 +102,13 @@ def combine_year_month(year: pd.Series, month: pd.Series) -> pd.Series | None:
     periods = pd.Series(pd.NA, index=year.index, dtype="object")
     periods[ok] = [format_period("M", int(a), int(b)) for a, b in zip(y[ok], m[ok])]
     return periods
+
+
+def quarters_dated_by_month(s: Series) -> Series:
+    """A quarterly table dated by one month per quarter (`1992-03-01`, `1992-06-01`, ...) parses as
+    monthly with two empty months between points, so it has no consecutive changes at all. When
+    every month sits at the same place in its quarter, the series is quarterly."""
+    if s.freq != "M" or len(s.points) < 8 or len({int(p[5:]) % 3 for p in s.points}) != 1:
+        return s
+    points = {format_period("Q", int(p[:4]), (int(p[5:]) - 1) // 3 + 1): v for p, v in s.points.items()}
+    return replace(s, freq="Q", points=points)

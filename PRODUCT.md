@@ -48,7 +48,7 @@ remains as an operator-only tool.
   analysis.
 - **Event pages.** Shocks lead each year page. A shock is a quarter in which more datasets than
   chance would allow had most of their series jump. It is tested against a null that shifts each
-  series' dates, family-wise across all quarters, and copies of one table count once. Turns (lasting
+  table family's dates, family-wise across all quarters, and copies of one table count once. Turns (lasting
   breaks from a size-correct test) follow as a quieter "also changed course" list, each with its
   direction, sped up or slowed down.
 - **Series pages.** Every series has a page: its chart, its breaks, its source dataset. Where the

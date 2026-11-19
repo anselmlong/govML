@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from src.atlas.periods import combine_year_month, parse_header, parse_time_values
+from src.atlas.periods import combine_year_month, parse_header, parse_time_values, quarters_dated_by_month
 from src.atlas.series import Series, make_series_id, slug
 
 
@@ -79,3 +79,11 @@ def test_series_ids_are_stable_slugs():
 def test_mon_yyyy_values_parse_as_monthly():
     freq, periods = parse_time_values(pd.Series(["OCT-2017", "MAR-2018", "OCT-2017"]))
     assert freq == "M" and list(periods) == ["2017-10", "2018-03", "2017-10"]
+
+
+def test_a_quarterly_table_dated_by_quarter_end_month_becomes_quarterly():
+    months = {f"{y}-{m:02d}": float(y + m) for y in range(1992, 1995) for m in (3, 6, 9, 12)}
+    s = quarters_dated_by_month(Series("d:x", "d", "x", {}, None, None, "M", months))
+    assert s.freq == "Q" and s.points["1992Q1"] == 1995.0 and s.points["1994Q4"] == 2006.0 and len(s.points) == 12
+    monthly = Series("d:y", "d", "y", {}, None, None, "M", {f"1992-{m:02d}": 1.0 for m in range(1, 13)})
+    assert quarters_dated_by_month(monthly) is monthly

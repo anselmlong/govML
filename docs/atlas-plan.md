@@ -378,6 +378,185 @@ sex/total splits first. `break_tests.parquet` holds the best date and p for ever
 not only for breaks. That is enough for a pooled test of whether break dates bunch in a year
 beyond chance, which can find events that no single series defends.
 
+### Shocks (phase 7)
+
+Code: `src/atlas/shocks.py`. Run
+
+    python -m src.atlas.shocks --store atlas/all --catalog catalog.db --out atlas/all [--breaks atlas/all/breaks.parquet]
+
+It writes `shocks.parquet` (one row per series jump) and `events.json` (the config, the per-level
+report with the 40 periods furthest above their null, and the events, ranked by families). Turns
+come from a phase 6 `breaks.parquet`, by default the one in `--out`. A phase 3 breaks file is
+refused, because it lacks `duplicate_of` and `direction`.
+
+```
+Shock    series_id, dataset_id, family, freq
+         period      native period of the jump
+         slot        quarter ("2020Q2") or, for annual series, year
+         z           robust z of the change; direction "up" | "down"
+         reversion   share of the jump undone over the next year of changes (None near the end)
+Event    period, level ("quarter" | "year")
+         families    shocked families; expected = mean of the null count for this period
+         p           per-period permutation p; p_familywise against the null's max over periods
+         reversion   median over members; top_agency, top_agency_share
+         flags       "no_reversion", "one_agency"
+         members     family, agency, datasets, shocked/covering series, reversion, the series' jumps
+         turns       de-duplicated phase 6 breaks dated in the same calendar year
+```
+
+#### The test
+
+1. **Changes.** Each series' longest gap-free run of changes (dlog or diff, as in phase 6), at
+   least 40 of them and not flat. Season means come out first.
+2. **Local level.** A centred rolling median of the changes, two years each side, comes out next.
+   This step is not in the prototype. Without it, a fast-growth stretch sits at z 4 to 6 for
+   months on end against a MAD set by the later, flat years. Dial-up and mobile subscriptions did
+   this through 2000, which is half of the prototype's 2000Q3. Annual series skip it: a 5-point
+   median soaks up a two-year episode, and 8.3% of annual changes then pass z 4, against 2.7%
+   without it.
+3. **Shock.** |z| >= 4, where z is the residual over 1.4826 × MAD. 3.6% of M/Q changes shock, so
+   the tails are heavy, and the null below takes the rate as given.
+4. **Family.** `family_key` is the phase 3 `table_key` with two more strips. Population splits
+   go (citizen, resident, overall, total, male, female, persons), so the six unemployment tables
+   become two families, number and rate. Manpower's `by Industry`, `by Occupation` and
+   `by Industry (SSIC 2020) and Occupational Group` cuts also go.
+
+   Then families are merged as copies when any pair of their phase 3 representatives (up to 10
+   per dataset and frequency) has changes correlating above 0.9. The changes are taken at the
+   level's coarsest frequency, deseasoned, clipped at 3 robust sd and compared over at least 40
+   shared changes, with 2020-2022 left out. On the real store, 180 keys become 142 families: the
+   HDB resale price index tables, exports with imports and exports by market, total and air
+   arrivals, the three non-landed price index tables, the four SITC price indices (rule 2's
+   same-row case) and unemployment number with rate.
+
+   Three versions came before this one:
+   - One headline per family, unclipped and over 20 changes, missed copies. Arrivals and air
+     arrivals by country correlate at 0.999 row by row, but their headlines only at 0.85.
+   - Up to 10 representatives per dataset and frequency, unclipped and over 20 changes, chained
+     air traffic, mobile subscriptions and private home sales into price-index and arrivals
+     groups. Single spikes and short
+     overlaps carried r past 0.9.
+   - With 2020-2022 kept in, air passengers and visitor arrivals merge, on r 0.985 that comes
+     from COVID. An event would then merge its own members.
+
+   A monthly series counts in a quarter when any of its months shocks. A family is shocked in a
+   quarter when at least half the series covering that quarter shocked.
+5. **Null.** Each family's shocked/not sequence over the quarters it covers is rotated by a random
+   offset, seeded, 10,000 times. Families are rotated as units, not series. Series of one table
+   jump together. Rotating them apart made "half the family at once" nearly impossible under the
+   null: the null total came out at 276 family-quarters against 399 observed, and noise quarters
+   such as 2007Q2 and 2023Q1 passed. A rotation keeps each family's own shock count, so the
+   observed and null totals now match exactly.
+6. **Family-wise bar.** The 99th percentile of the null's maximum count over all quarters, as in
+   the prototype. An event is a period whose count reaches it (p_familywise <= 0.01). A
+   single-step min-p was tried, so that low-exposure early quarters would not be judged against
+   a bar set by 2010s exposure. With 220 quarters it needs on the order of 100,000 reps to
+   resolve p_familywise at 0.01. A first version that counted each null draw in its own
+   reference set rejected 2.5% at a nominal 1%. The corrected min-p still left 1998Q3 at
+   p_familywise 0.68, so it bought nothing, and it was dropped.
+
+#### Artefact flags
+
+Flags label an event. They never remove one.
+- `no_reversion` is set when the median member's reversion is below 0.5. A revision or rebasing
+  is a step that stays. On planted 12 sd jumps in t(3) noise, a spike that comes back has
+  median reversion 1.01 and a step 0.03. Each is on the right side of 0.5 in 97% of 200 trials.
+  A recession whose fall lasts a year also steps and stays, so this flag fires on 2008Q4.
+- `one_agency` is set when the top agency's share of members beats a one-sided binomial test at
+  p < 0.01, against that agency's share of the families covering the period. SingStat is half
+  the catalog, so a raw share threshold would flag everything.
+
+#### Size
+
+On synthetic stores of 30 families × 3 quarterly series × 120 quarters, series inside a family
+share a t(3) factor and families are independent. Share of stores with any event at the 99% bar,
+over 300 seeds each:
+
+| within-family correlation | family rotation (shipped) | per-series rotation (the brief) |
+|---|---|---|
+| 0.8 | 1.3% | 62% |
+| 0.5 | 1.3% | 21% |
+
+The test suite checks 20 seeds at 0.8, and at most 2 may have an event. Runtime on the real
+store: the null takes 0.6 s for 10,000 reps, and the whole CLI takes 7 s, mostly reading the
+store. The bar is 13 at both 10,000 and 100,000 reps.
+
+#### Annual series
+
+They get their own year-level run with their own null, and nothing is merged into quarters. On
+the real store this covers 3,113 series in 46 families. Most families are population by age and
+sex, school enrolment, marriages and annulments, and the four SingStat price indices. The
+year-level bar is 5 families. The best years are 1982 and 1984, at 3 families each (expected
+0.6, p_familywise about 0.6), so the year level has no events. It stays in the batch because it is
+cheap and tested against its own null. Annual series cannot be placed in a quarter. Adding them
+to the quarter level as four quarters each would let one census table count four times.
+
+#### Numbers from the whole-catalog store
+
+Quarter level: 6,312 M/Q series in 142 families, 50,434 shocks, and a bar of 13 families.
+
+| period | families | expected | p | p_familywise | reversion | flags |
+|---|---|---|---|---|---|---|
+| 2020Q2 | 18 | 3.5 | 1e-4 | 1e-4 | 0.66 | |
+
+2020Q2 is the COVID circuit breaker, and it is real. Its members:
+- visitor arrivals, air traffic, aircraft and transit passengers, vessel calls and arrivals;
+- the retail sales index, the F&B services index and GDP;
+- town gas use, which went up, and peak power demand;
+- short work weeks and active CPF members;
+- HDB and private property document lodgements, bank interest rates and state land use;
+- two that are likely noise passengers: zakat nisab rates and mobile subscriptions by type.
+
+Phase 6 turns in 2020 attach as secondary: retail sales indices slowing in 2020-05 and
+accelerating in 2020-06, and resale flat prices accelerating in 2020-06.
+
+Below the bar, ranked by observed minus expected:
+- 2020Q1 has 12 families (expected 3.5, p 1e-4, p_familywise 0.019). This is COVID's onset, and
+  it would pass at 95%.
+- 2008Q4 has 11 (expected 3.2, p 3e-4, p_familywise 0.07). This is the financial crisis: private
+  residential prices and rents, industrial and office rents, short work weeks, the vacancy
+  ratio, cargo and foreign reserves. It is flagged `no_reversion` (-0.65), because prices kept
+  falling. Its mobile subscriptions member jumps ±15 z between subscription types in 2008-12,
+  which is likely a reclassification.
+- 2020Q3 has 8 (p 0.018), 2009Q2 has 8 (p 0.007) and 2009Q1 has 7 (p 0.03).
+- 1998Q3 has 6 (expected 1.9, p 0.007): unemployment up, private residential and industrial
+  prices and rents down. It is the Asian crisis, but it is not defensible family-wise against
+  the 2010s exposure.
+- 2000Q3 has 4 (expected 2.1, p 0.14): unemployment down 8 z with reversion 0.38, plus dial-up,
+  the vacancy ratio and vessels. With season means only, the brief's method, it has 5 (p 0.01),
+  adding mobile subscriptions and mobile penetration. There it is flagged both `no_reversion`
+  (median -1.16) and `one_agency` (IMDA 60%). Neither method makes it an event.
+
+How the setup moves these:
+
+| variant | families | bar | events | 2020Q1 p_fw | 2008Q4 families, p_fw | 1998Q3 p |
+|---|---|---|---|---|---|---|
+| shipped | 142 | 13 | 2020Q2 | 0.019 | 11, 0.07 | 0.007 |
+| season means only | 142 | 12 | 2020Q2 | 0.012 | 2, 1.0 | 0.001 |
+| no copy merge | 180 | 15 | 2020Q2, 2008Q4 | 0.043 | 16, 0.001 | 0.002 |
+| season only, no merge | 180 | 13 | 2020Q2 | 0.022 | outside the top 40 | 0.0004 |
+
+2008Q4 is an event only when copies count separately. Without the local level, the property
+indices' fall sits inside their own volatile history. No variant makes 1998Q3, 2009Q1 or 2000Q3
+an event. The prototype found those three because it rotated series, not families, and counted
+copies separately.
+
+#### Open
+
+- The single-quarter unit splits one episode over several quarters: COVID shows as 2020Q1, Q2 and
+  Q3. A test over windows of 2 to 3 quarters may lift COVID's onset and 1998 to the bar.
+- The family-wise bar is strict by design. At 95%, 2020Q1 would also pass. That is a product
+  call.
+- Air Traffic Movements' transit passengers and the Aircraft and Transit Passenger table's
+  transit rows correlate at 0.95 outside COVID, over fewer than 40 changes. The Air Traffic row
+  is past the 10-row cap, and the pair falls under the 40-change overlap, so the two tables stay
+  two families in 2020Q2.
+- A quarterly table dated by a month per quarter (`1992-03-01`) used to flip as monthly with
+  empty months between points, and phase 6 tested none of those series. `flip` now makes such
+  series quarterly. The flipper store predates the fix, so `shocks` applies it again on load.
+  Phase 6 reads the store as is, so the 12 unemployment series stay `too_short` there and give
+  no turns until the store is re-flipped.
+
 ## Phases
 
 Phases 1 to 4 ran on 2026-11-19 (results: `docs/findings-v0.md`). The product then moved from
@@ -393,16 +572,11 @@ cross-dataset relationships to a timeline (see `PRODUCT.md`). Phases 5 onward ar
 6. **Strict breaks.** Done (see "Breaks (phase 6)"). A long-run-variance sup-Wald with a wild AR
    sieve bootstrap holds 1% size on AR(1) series. On the whole store it finds 357 breaks in
    12,692 tested series, 256 after de-duplication.
-7. **Shocks and clusters.** These lead the year pages.
-   - **Detection.** A series shocks in a period when its deseasoned change is at least 4 robust sd
-     (MAD).
-   - **Shocked table family.** A table family (copies collapsed by the phase 3 table key) counts as
-     shocked when at least half its series shock that quarter.
-   - **Test.** Compare the count against a null that circularly shifts each series' shock dates,
-     family-wise across quarters.
-   - **Prototype.** On the first store, 2020Q1 to Q3, 1998Q3 and 2009Q1 clear the 99% family-wise
-     bar. 2000Q3 does too, but it looks like a labour-force revision.
-   - **Turns.** Turns from phase 6 are listed under the year as secondary.
+7. **Shocks and clusters.** Done (see "Shocks (phase 7)"). Each series gets robust-z jumps, and
+   table families count once. The null rotates each family's shock sequence. The family-wise bar
+   is the 99th percentile of the null's maximum. On the whole store only 2020Q2 (18 families)
+   clears the bar of 13. 2020Q1 (12, p_familywise 0.02) and 2008Q4 (11, 0.07) come next. Phase 6
+   turns in the same year are listed as secondary.
 
 8. **Cause guesses.** An OpenRouter LLM names each cluster. It is shown as "likely ..." or
    "unexplained", and is never stated as fact. Replies are cached.
